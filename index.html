@@ -21,24 +21,23 @@
   <div class="gradient-orb orb3"></div>
 
   <!-- ========== ВЕРХНЯЯ ПАНЕЛЬ ========== -->
-  <header class="navbar glass">
+  <header class="navbar glass" id="navbar">
     <div class="navbar-container">
-      <div class="logo">
+      <div class="logo" onclick="window.location.href='index.html'">
         <span class="logo-icon">◆</span>
         <span class="logo-text">IdeaHub</span>
       </div>
       <div class="navbar-actions">
         <!-- Блок для авторизованного пользователя -->
         <div id="userInfo" style="display:none;" class="user-info">
-          <span class="user-avatar" id="userAvatar">👤</span>
+          <div class="user-avatar-wrapper" id="userAvatarWrapper">
+            <span class="user-avatar" id="userAvatar">👤</span>
+          </div>
           <span class="user-name" id="userName">Пользователь</span>
           <button class="nav-btn glass-btn" id="logoutBtn">Выйти</button>
         </div>
         <!-- Блок для гостя -->
         <div id="guestActions">
-          <button class="nav-btn settings-btn" id="settingsBtn" aria-label="Настройки">
-            <i data-lucide="settings"></i>
-          </button>
           <button class="nav-btn glass-btn" id="loginBtn">Войти</button>
           <button class="nav-btn glass-btn primary" id="registerBtn">Регистрация</button>
         </div>
@@ -90,26 +89,6 @@
     <div class="modal-window glass" id="modalWindow">
       <button class="modal-close" id="modalCloseBtn">&times;</button>
       <div id="modalContent" class="modal-content"></div>
-    </div>
-  </div>
-
-  <!-- ========== МОДАЛ НАСТРОЕК ========== -->
-  <div id="settingsModal" class="modal-overlay small-modal">
-    <div class="modal-backdrop" id="settingsBackdrop"></div>
-    <div class="modal-window glass settings-window">
-      <button class="modal-close" id="settingsCloseBtn">&times;</button>
-      <h3 class="settings-title">Настройки</h3>
-      <div class="settings-item">
-        <span>Тема</span>
-        <div class="theme-toggle-group">
-          <button class="theme-btn active" data-theme="dark">🌙 Тёмная</button>
-          <button class="theme-btn" data-theme="light">☀️ Светлая</button>
-        </div>
-      </div>
-      <div class="settings-item" id="profileSection" style="display:none;">
-        <span>Профиль</span>
-        <span id="profileEmail" class="text-sm text-gray-400"></span>
-      </div>
     </div>
   </div>
 
