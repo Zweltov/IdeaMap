@@ -1,3 +1,8 @@
+// ===== КОНФИГУРАЦИЯ SUPABASE =====
+const SUPABASE_URL = 'https://ваш-проект.supabase.co'; // Замените на ваш URL
+const SUPABASE_KEY = 'ваш-public-ключ'; // Замените на ваш публичный ключ
+const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
 // ===== ДАННЫЕ =====
 const ideas = [
   { id: 1, name: "AI-помощник для бизнеса", category: "IT", capital: 25000, complexity: "Средняя", potential: "Высокий", rating: 4.8, desc: "Чат-боты и аналитика для малого бизнеса.", why: "Автоматизация продаж.", pros: "Быстрая окупаемость.", cons: "Конкуренция.", how: "Соберите MVP за 3 мес.", risks: "Технические сбои." },
@@ -29,6 +34,8 @@ let currentFilter = 'all';
 let currentSort = 'rating';
 let searchTerm = '';
 let currentTheme = localStorage.getItem('ideahub_theme') || 'dark';
+let currentUser = null;
+let currentIdeaComments = [];
 
 // ===== DOM =====
 const grid = document.getElementById('cardsGrid');
@@ -41,15 +48,275 @@ const searchInput = document.getElementById('searchInput');
 const filterPills = document.querySelectorAll('.filter-pill');
 const sortSelect = document.getElementById('sortSelect');
 const exploreBtn = document.getElementById('exploreBtn');
+const userGreeting = document.getElementById('userGreeting');
+const loginBtn = document.getElementById('loginBtn');
+const registerBtn = document.getElementById('registerBtn');
+const logoutBtn = document.getElementById('logoutBtn');
 
-// ===== ТЕМА =====
-function applyTheme(theme) {
-  currentTheme = theme;
-  localStorage.setItem('ideahub_theme', theme);
-  document.body.classList.toggle('light-theme', theme === 'light');
-  document.querySelectorAll('.theme-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.theme === theme);
-  });
+// ===== УВЕДОМЛЕНИЯ =====
+function showNotification(message, type = 'success') {
+  const existing = document.querySelector('.notification');
+  if (existing) existing.remove();
+
+  const notif = document.createElement('div');
+  notif.className = `notification ${type}`;
+  notif.textContent = message;
+  document.body.appendChild(notif);
+
+  setTimeout(() => notif.classList.add('show'), 10);
+  setTimeout(() => {
+    notif.classList.remove('show');
+    setTimeout(() => notif.remove(), 400);
+  }, 3000);
+}
+
+// ===== АВТОРИЗАЦИЯ =====
+async function signUp(email, password, name) {
+  try {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { name }
+      }
+    });
+    if (error) throw error;
+    showNotification('Аккаунт создан! Проверьте почту для подтверждения.');
+    closeRegister();
+    return data;
+  } catch (error) {
+    showNotification(error.message, 'error');
+    return null;
+  }
+}
+
+async function signIn(email, password) {
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+    if (error) throw error;
+    showNotification('Добро пожаловать!');
+    closeLogin();
+    await updateUserUI();
+    renderCards();
+    return data;
+  } catch (error) {
+    showNotification(error.message, 'error');
+    return null;
+  }
+}
+
+async function signOut() {
+  try {
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
+    currentUser = null;
+    await updateUserUI();
+    renderCards();
+    showNotification('Вы вышли из аккаунта');
+  } catch (error) {
+    showNotification(error.message, 'error');
+  }
+}
+
+async function updateUserUI() {
+  const { data: { user } } = await supabase.auth.getUser();
+  currentUser = user;
+
+  if (user) {
+    const name = user.user_metadata?.name || user.email?.split('@')[0] || 'Пользователь';
+    userGreeting.textContent = `👋 ${name}`;
+    loginBtn.style.display = 'none';
+    registerBtn.style.display = 'none';
+    logoutBtn.style.display = 'inline-block';
+    document.getElementById('profileSection').style.display = 'flex';
+    document.getElementById('profileEmail').textContent = user.email;
+  } else {
+    userGreeting.textContent = '';
+    loginBtn.style.display = 'inline-block';
+    registerBtn.style.display = 'inline-block';
+    logoutBtn.style.display = 'none';
+    document.getElementById('profileSection').style.display = 'none';
+  }
+}
+
+// ===== КОММЕНТАРИИ =====
+async function loadComments(ideaId) {
+  try {
+    const { data, error } = await supabase
+      .from('comments')
+      .select('*')
+      .eq('idea_id', ideaId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    currentIdeaComments = data || [];
+    return data;
+  } catch (error) {
+    console.error('Ошибка загрузки комментариев:', error);
+    return [];
+  }
+}
+
+async function addComment(ideaId, text) {
+  if (!currentUser) {
+    showNotification('Войдите, чтобы оставить комментарий', 'error');
+    return;
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('comments')
+      .insert({
+        idea_id: ideaId,
+        user_id: currentUser.id,
+        user_name: currentUser.user_metadata?.name || currentUser.email?.split('@')[0] || 'Аноним',
+        text: text
+      })
+      .select();
+
+    if (error) throw error;
+    showNotification('Комментарий добавлен');
+    await loadComments(ideaId);
+    // Обновляем модал
+    const idea = ideas.find(i => i.id === ideaId);
+    if (idea) openModal(idea, currentCardElement);
+    return data;
+  } catch (error) {
+    showNotification(error.message, 'error');
+    return null;
+  }
+}
+
+// ===== ЛАЙКИ (Supabase) =====
+async function toggleLikeSupabase(ideaId) {
+  if (!currentUser) {
+    showNotification('Войдите, чтобы оценить идею', 'error');
+    return;
+  }
+
+  try {
+    // Проверяем, есть ли уже лайк
+    const { data: existing } = await supabase
+      .from('likes')
+      .select('*')
+      .eq('idea_id', ideaId)
+      .eq('user_id', currentUser.id)
+      .single();
+
+    if (existing) {
+      // Удаляем лайк
+      await supabase
+        .from('likes')
+        .delete()
+        .eq('idea_id', ideaId)
+        .eq('user_id', currentUser.id);
+      
+      // Обновляем локальный счетчик
+      likes[ideaId] = (likes[ideaId] || 1) - 1;
+      if (likes[ideaId] <= 0) delete likes[ideaId];
+    } else {
+      // Добавляем лайк
+      await supabase
+        .from('likes')
+        .insert({
+          idea_id: ideaId,
+          user_id: currentUser.id
+        });
+      
+      likes[ideaId] = (likes[ideaId] || 0) + 1;
+    }
+
+    localStorage.setItem('ideahub_likes', JSON.stringify(likes));
+    renderCards();
+    return true;
+  } catch (error) {
+    console.error('Ошибка с лайком:', error);
+    showNotification('Ошибка при оценке', 'error');
+    return false;
+  }
+}
+
+// ===== ИЗБРАННОЕ (Supabase) =====
+async function toggleFavSupabase(ideaId) {
+  if (!currentUser) {
+    showNotification('Войдите, чтобы добавить в избранное', 'error');
+    return;
+  }
+
+  try {
+    const { data: existing } = await supabase
+      .from('favorites')
+      .select('*')
+      .eq('idea_id', ideaId)
+      .eq('user_id', currentUser.id)
+      .single();
+
+    if (existing) {
+      await supabase
+        .from('favorites')
+        .delete()
+        .eq('idea_id', ideaId)
+        .eq('user_id', currentUser.id);
+      
+      favorites = favorites.filter(id => id !== ideaId);
+    } else {
+      await supabase
+        .from('favorites')
+        .insert({
+          idea_id: ideaId,
+          user_id: currentUser.id
+        });
+      
+      if (!favorites.includes(ideaId)) favorites.push(ideaId);
+    }
+
+    localStorage.setItem('ideahub_favs', JSON.stringify(favorites));
+    renderCards();
+    return true;
+  } catch (error) {
+    console.error('Ошибка с избранным:', error);
+    showNotification('Ошибка при сохранении', 'error');
+    return false;
+  }
+}
+
+// ===== ЗАГРУЗКА ДАННЫХ ПОЛЬЗОВАТЕЛЯ =====
+async function loadUserData() {
+  try {
+    // Загружаем избранное
+    if (currentUser) {
+      const { data: favData } = await supabase
+        .from('favorites')
+        .select('idea_id')
+        .eq('user_id', currentUser.id);
+      
+      if (favData) {
+        favorites = favData.map(f => f.idea_id);
+        localStorage.setItem('ideahub_favs', JSON.stringify(favorites));
+      }
+
+      // Загружаем лайки
+      const { data: likeData } = await supabase
+        .from('likes')
+        .select('idea_id')
+        .eq('user_id', currentUser.id);
+      
+      if (likeData) {
+        const newLikes = {};
+        likeData.forEach(l => {
+          newLikes[l.idea_id] = (newLikes[l.idea_id] || 0) + 1;
+        });
+        // Объединяем с существующими лайками
+        likes = { ...likes, ...newLikes };
+        localStorage.setItem('ideahub_likes', JSON.stringify(likes));
+      }
+    }
+  } catch (error) {
+    console.error('Ошибка загрузки данных:', error);
+  }
 }
 
 // ===== ОТРИСОВКА КАРТОЧЕК =====
@@ -94,24 +361,20 @@ function renderCards() {
     grid.appendChild(card);
   });
 
-  // Привязываем события к новым элементам
   attachCardEvents();
 }
 
 function attachCardEvents() {
-  // Клик по карточке для открытия
   document.querySelectorAll('.glass-card').forEach(card => {
     card.removeEventListener('click', handleCardClick);
     card.addEventListener('click', handleCardClick);
   });
 
-  // Избранное
   document.querySelectorAll('.fav-btn').forEach(btn => {
     btn.removeEventListener('click', handleFavClick);
     btn.addEventListener('click', handleFavClick);
   });
 
-  // Лайки
   document.querySelectorAll('.like-btn').forEach(btn => {
     btn.removeEventListener('click', handleLikeClick);
     btn.addEventListener('click', handleLikeClick);
@@ -125,40 +388,29 @@ function handleCardClick(e) {
   if (idea) openModal(idea, this);
 }
 
-function handleFavClick(e) {
+async function handleFavClick(e) {
   e.stopPropagation();
   const id = parseInt(this.dataset.id);
-  toggleFav(id);
-  renderCards();
+  await toggleFavSupabase(id);
 }
 
-function handleLikeClick(e) {
+async function handleLikeClick(e) {
   e.stopPropagation();
   const id = parseInt(this.dataset.id);
-  toggleLike(id);
-  renderCards();
-}
-
-// ===== ИЗБРАННОЕ / ЛАЙКИ =====
-function toggleFav(id) {
-  if (favorites.includes(id)) favorites = favorites.filter(f => f !== id);
-  else favorites.push(id);
-  localStorage.setItem('ideahub_favs', JSON.stringify(favorites));
-}
-
-function toggleLike(id) {
-  likes[id] = (likes[id] || 0) + 1;
-  localStorage.setItem('ideahub_likes', JSON.stringify(likes));
+  await toggleLikeSupabase(id);
 }
 
 // ===== МОДАЛ С АНИМАЦИЕЙ =====
 let isModalOpen = false;
 let currentCardElement = null;
 
-function openModal(idea, cardElement) {
+async function openModal(idea, cardElement) {
   if (isModalOpen) return;
   isModalOpen = true;
   currentCardElement = cardElement;
+
+  // Загружаем комментарии
+  await loadComments(idea.id);
 
   const isFav = favorites.includes(idea.id);
   const likeCount = likes[idea.id] || 0;
@@ -184,34 +436,67 @@ function openModal(idea, cardElement) {
       <div><span class="text-gray-400">Стартовый капитал:</span> $${idea.capital.toLocaleString()}</div>
       <div><span class="text-gray-400">Как начать:</span> ${idea.how}</div>
       <div><span class="text-gray-400">Риски:</span> ${idea.risks}</div>
-      <button class="btn-glow w-full mt-4" onclick="closeModal()">Добавить в избранное ❤️</button>
+      
+      <!-- Комментарии -->
+      <div class="comments-section">
+        <h4 class="font-semibold mb-3">Комментарии (${currentIdeaComments.length})</h4>
+        <div class="comments-list">
+          ${currentIdeaComments.map(c => `
+            <div class="comment-item">
+              <div class="comment-author">${c.user_name}</div>
+              <div class="comment-text">${c.text}</div>
+              <div class="comment-time">${new Date(c.created_at).toLocaleString()}</div>
+            </div>
+          `).join('')}
+        </div>
+        <div class="comment-input-group">
+          <input type="text" id="commentInput" placeholder="Напишите комментарий..." ${!currentUser ? 'disabled' : ''} />
+          <button id="commentSubmitBtn" ${!currentUser ? 'disabled' : ''}>Отправить</button>
+        </div>
+      </div>
     </div>
   `;
 
   // События для кнопок внутри модала
-  modalContent.querySelector('.fav-btn')?.addEventListener('click', (e) => {
+  modalContent.querySelector('.fav-btn')?.addEventListener('click', async (e) => {
     e.stopPropagation();
     const id = parseInt(e.target.dataset.id);
-    toggleFav(id);
+    await toggleFavSupabase(id);
     openModal(ideas.find(i => i.id === id), currentCardElement);
   });
 
-  modalContent.querySelector('.like-btn')?.addEventListener('click', (e) => {
+  modalContent.querySelector('.like-btn')?.addEventListener('click', async (e) => {
     e.stopPropagation();
     const id = parseInt(e.target.dataset.id);
-    toggleLike(id);
+    await toggleLikeSupabase(id);
     openModal(ideas.find(i => i.id === id), currentCardElement);
   });
 
-  // Получаем позицию карточки для анимации
+  // Отправка комментария
+  const commentInput = modalContent.querySelector('#commentInput');
+  const commentBtn = modalContent.querySelector('#commentSubmitBtn');
+  
+  commentBtn?.addEventListener('click', async () => {
+    const text = commentInput.value.trim();
+    if (text) {
+      await addComment(idea.id, text);
+      commentInput.value = '';
+      // Переоткрываем модал для обновления
+      openModal(idea, currentCardElement);
+    }
+  });
+
+  commentInput?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') commentBtn?.click();
+  });
+
+  // Анимация открытия
   const rect = cardElement?.getBoundingClientRect();
   const windowWidth = window.innerWidth;
   const windowHeight = window.innerHeight;
 
-  // Показываем оверлей
   modalOverlay.classList.add('active');
 
-  // Устанавливаем начальное состояние модального окна (маленькое, в позиции карточки)
   if (rect) {
     const scaleX = rect.width / 700;
     const scaleY = rect.height / (windowHeight * 0.9);
@@ -224,7 +509,6 @@ function openModal(idea, cardElement) {
     modalWindow.style.transition = 'none';
   }
 
-  // Запускаем анимацию через requestAnimationFrame
   requestAnimationFrame(() => {
     modalWindow.style.transition = 'transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.4s ease';
     modalWindow.style.transform = 'scale(1) translate(0, 0)';
@@ -235,7 +519,6 @@ function openModal(idea, cardElement) {
 function closeModal() {
   if (!isModalOpen) return;
 
-  // Получаем позицию карточки для обратной анимации
   const rect = currentCardElement?.getBoundingClientRect();
   const windowWidth = window.innerWidth;
   const windowHeight = window.innerHeight;
@@ -271,13 +554,8 @@ const settingsBackdrop = document.getElementById('settingsBackdrop');
 const settingsCloseBtn = document.getElementById('settingsCloseBtn');
 const settingsBtn = document.getElementById('settingsBtn');
 
-function openSettings() {
-  settingsModal.classList.add('active');
-}
-
-function closeSettings() {
-  settingsModal.classList.remove('active');
-}
+function openSettings() { settingsModal.classList.add('active'); }
+function closeSettings() { settingsModal.classList.remove('active'); }
 
 settingsBtn?.addEventListener('click', openSettings);
 settingsBackdrop?.addEventListener('click', closeSettings);
@@ -288,22 +566,26 @@ document.querySelectorAll('.theme-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     const theme = btn.dataset.theme;
     applyTheme(theme);
-    // Обновляем активный класс
     document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
   });
 });
 
-// ===== АВТОРИЗАЦИЯ =====
+// ===== ТЕМА =====
+function applyTheme(theme) {
+  currentTheme = theme;
+  localStorage.setItem('ideahub_theme', theme);
+  document.body.classList.toggle('light-theme', theme === 'light');
+}
+
+// ===== АВТОРИЗАЦИЯ МОДАЛЫ =====
 const loginModal = document.getElementById('loginModal');
 const loginBackdrop = document.getElementById('loginBackdrop');
 const loginCloseBtn = document.getElementById('loginCloseBtn');
-const loginBtn = document.getElementById('loginBtn');
 
 const registerModal = document.getElementById('registerModal');
 const registerBackdrop = document.getElementById('registerBackdrop');
 const registerCloseBtn = document.getElementById('registerCloseBtn');
-const registerBtn = document.getElementById('registerBtn');
 
 function openLogin() { loginModal.classList.add('active'); }
 function closeLogin() { loginModal.classList.remove('active'); }
@@ -328,7 +610,23 @@ document.getElementById('switchToLogin')?.addEventListener('click', () => {
   setTimeout(openLogin, 200);
 });
 
-// Закрытие модала идеи
+// Обработка форм
+document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email = document.getElementById('loginEmail').value;
+  const password = document.getElementById('loginPassword').value;
+  await signIn(email, password);
+});
+
+document.getElementById('registerForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const name = document.getElementById('registerName').value;
+  const email = document.getElementById('registerEmail').value;
+  const password = document.getElementById('registerPassword').value;
+  await signUp(email, password, name);
+});
+
+// ===== ЗАКРЫТИЕ МОДАЛА ИДЕИ =====
 modalBackdrop?.addEventListener('click', closeModal);
 modalCloseBtn?.addEventListener('click', closeModal);
 
@@ -357,9 +655,17 @@ exploreBtn?.addEventListener('click', () => {
   document.getElementById('catalog').scrollIntoView({ behavior: 'smooth' });
 });
 
+// ===== ВЫХОД =====
+logoutBtn?.addEventListener('click', signOut);
+
 // ===== ИНИЦИАЛИЗАЦИЯ =====
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   applyTheme(currentTheme);
+  
+  // Проверяем авторизацию
+  await updateUserUI();
+  await loadUserData();
+  
   renderCards();
   lucide.createIcons();
 

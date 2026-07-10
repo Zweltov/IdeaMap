@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IdeaHub — каталог бизнес-идей</title>
+  <!-- Шрифты и иконки -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,600;14..32,700&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- GSAP для анимаций -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Подключаем стили -->
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- Фоновые декоративные элементы -->
+  <div class="gradient-orb orb1"></div>
+  <div class="gradient-orb orb2"></div>
+  <div class="gradient-orb orb3"></div>
+
+  <!-- ========== ВЕРХНЯЯ ПАНЕЛЬ ========== -->
+  <header class="navbar glass">
+    <div class="navbar-container">
+      <div class="logo">
+        <span class="logo-icon">◆</span>
+        <span class="logo-text">IdeaHub</span>
+      </div>
+      <div class="navbar-actions">
+        <span id="userGreeting" class="user-greeting"></span>
+        <button class="nav-btn settings-btn" id="settingsBtn" aria-label="Настройки">
+          <i data-lucide="settings"></i>
+        </button>
+        <button class="nav-btn glass-btn" id="loginBtn">Войти</button>
+        <button class="nav-btn glass-btn primary" id="registerBtn">Регистрация</button>
+        <button class="nav-btn glass-btn" id="logoutBtn" style="display:none;">Выйти</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ========== HERO ========== -->
+  <section id="hero" class="hero-section">
+    <div class="hero-content" data-aos="fade-up" data-aos-duration="1000">
+      <h1 class="hero-title">Найди идею для<br>своего бизнеса</h1>
+      <p class="hero-subtitle">Тысячи идей, которые помогут найти направление для старта</p>
+      <button class="btn-glow hero-btn" id="exploreBtn">Исследовать идеи</button>
+    </div>
+  </section>
+
+  <!-- ========== КАТАЛОГ ========== -->
+  <section id="catalog" class="catalog-section">
+    <div class="catalog-container">
+      <!-- Управление -->
+      <div class="catalog-controls" data-aos="fade-up">
+        <h2 class="catalog-title">Каталог идей</h2>
+        <div class="controls-group">
+          <input id="searchInput" type="text" placeholder="Поиск..." class="search-input" />
+          <div class="filter-group" id="filterContainer">
+            <span class="filter-pill active" data-filter="all">Все</span>
+            <span class="filter-pill" data-filter="IT">IT</span>
+            <span class="filter-pill" data-filter="Еда">Еда</span>
+            <span class="filter-pill" data-filter="Услуги">Услуги</span>
+            <span class="filter-pill" data-filter="Недвижимость">Недвижимость</span>
+            <span class="filter-pill" data-filter="Производство">Производство</span>
+            <span class="filter-pill" data-filter="Онлайн-бизнес">Онлайн</span>
+          </div>
+          <select id="sortSelect" class="sort-select">
+            <option value="rating">По рейтингу</option>
+            <option value="capital">По капиталу</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Сетка карточек -->
+      <div id="cardsGrid" class="cards-grid"></div>
+    </div>
+  </section>
+
+  <!-- ========== МОДАЛЬНОЕ ОКНО (идея) ========== -->
+  <div id="ideaModal" class="modal-overlay">
+    <div class="modal-backdrop" id="modalBackdrop"></div>
+    <div class="modal-window glass" id="modalWindow">
+      <button class="modal-close" id="modalCloseBtn">&times;</button>
+      <div id="modalContent" class="modal-content"></div>
+    </div>
+  </div>
+
+  <!-- ========== МОДАЛ НАСТРОЕК ========== -->
+  <div id="settingsModal" class="modal-overlay small-modal">
+    <div class="modal-backdrop" id="settingsBackdrop"></div>
+    <div class="modal-window glass settings-window">
+      <button class="modal-close" id="settingsCloseBtn">&times;</button>
+      <h3 class="settings-title">Настройки</h3>
+      <div class="settings-item">
+        <span>Тема</span>
+        <div class="theme-toggle-group">
+          <button class="theme-btn active" data-theme="dark">🌙 Тёмная</button>
+          <button class="theme-btn" data-theme="light">☀️ Светлая</button>
+        </div>
+      </div>
+      <div class="settings-item" id="profileSection" style="display:none;">
+        <span>Профиль</span>
+        <span id="profileEmail" class="text-sm text-gray-400"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== МОДАЛ ВХОДА ========== -->
+  <div id="loginModal" class="modal-overlay small-modal">
+    <div class="modal-backdrop" id="loginBackdrop"></div>
+    <div class="modal-window glass auth-window">
+      <button class="modal-close" id="loginCloseBtn">&times;</button>
+      <h3 class="auth-title">Вход</h3>
+      <form id="loginForm" class="auth-form">
+        <input type="email" id="loginEmail" placeholder="Email" required />
+        <input type="password" id="loginPassword" placeholder="Пароль" required />
+        <button type="submit" class="btn-glow">Войти</button>
+      </form>
+      <p class="auth-switch">Нет аккаунта? <span id="switchToRegister">Регистрация</span></p>
+    </div>
+  </div>
+
+  <!-- ========== МОДАЛ РЕГИСТРАЦИИ ========== -->
+  <div id="registerModal" class="modal-overlay small-modal">
+    <div class="modal-backdrop" id="registerBackdrop"></div>
+    <div class="modal-window glass auth-window">
+      <button class="modal-close" id="registerCloseBtn">&times;</button>
+      <h3 class="auth-title">Регистрация</h3>
+      <form id="registerForm" class="auth-form">
+        <input type="text" id="registerName" placeholder="Имя" required />
+        <input type="email" id="registerEmail" placeholder="Email" required />
+        <input type="password" id="registerPassword" placeholder="Пароль (минимум 6 символов)" required minlength="6" />
+        <button type="submit" class="btn-glow">Создать аккаунт</button>
+      </form>
+      <p class="auth-switch">Уже есть аккаунт? <span id="switchToLogin">Войти</span></p>
+    </div>
+  </div>
+
+  <!-- Подключаем скрипты -->
+  <script src="script.js"></script>
+</body>
+</html>
