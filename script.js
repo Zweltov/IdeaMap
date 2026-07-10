@@ -1,7 +1,20 @@
-// ===== КОНФИГУРАЦИЯ SUPABASE =====
-const SUPABASE_URL = 'https://ваш-проект.supabase.co'; // Замените на ваш URL
-const SUPABASE_KEY = 'ваш-public-ключ'; // Замените на ваш публичный ключ
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// ===== КОНФИГУРАЦИЯ SUPABASE (опционально) =====
+const SUPABASE_URL = 'https://ваш-проект.supabase.co'; // Замените при наличии
+const SUPABASE_KEY = 'ваш-public-ключ'; // Замените при наличии
+
+// Инициализация Supabase только если есть URL и ключ
+let supabase = null;
+try {
+  if (SUPABASE_URL && SUPABASE_URL !== 'https://ваш-проект.supabase.co' && 
+      SUPABASE_KEY && SUPABASE_KEY !== 'ваш-public-ключ') {
+    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    console.log('✅ Supabase инициализирован');
+  } else {
+    console.log('ℹ️ Supabase не настроен, работаем в офлайн-режиме');
+  }
+} catch (e) {
+  console.log('ℹ️ Supabase не доступен, работаем в офлайн-режиме');
+}
 
 // ===== ДАННЫЕ =====
 const ideas = [
@@ -35,7 +48,7 @@ let currentSort = 'rating';
 let searchTerm = '';
 let currentTheme = localStorage.getItem('ideahub_theme') || 'dark';
 let currentUser = null;
-let currentIdeaComments = [];
+let currentIdeaComments = {};
 
 // ===== DOM =====
 const grid = document.getElementById('cardsGrid');
@@ -70,69 +83,120 @@ function showNotification(message, type = 'success') {
   }, 3000);
 }
 
-// ===== АВТОРИЗАЦИЯ =====
+// ===== АВТОРИЗАЦИЯ (локальная, без Supabase) =====
 async function signUp(email, password, name) {
-  try {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { name }
-      }
-    });
-    if (error) throw error;
-    showNotification('Аккаунт создан! Проверьте почту для подтверждения.');
+  if (supabase) {
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { name } }
+      });
+      if (error) throw error;
+      showNotification('Аккаунт создан! Проверьте почту для подтверждения.');
+      closeRegister();
+      return data;
+    } catch (error) {
+      showNotification(error.message, 'error');
+      return null;
+    }
+  } else {
+    // Офлайн-режим
+    const users = JSON.parse(localStorage.getItem('ideahub_users')) || [];
+    if (users.find(u => u.email === email)) {
+      showNotification('Пользователь уже существует', 'error');
+      return null;
+    }
+    users.push({ email, password, name });
+    localStorage.setItem('ideahub_users', JSON.stringify(users));
+    showNotification('Аккаунт создан! Теперь войдите.');
     closeRegister();
-    return data;
-  } catch (error) {
-    showNotification(error.message, 'error');
-    return null;
+    setTimeout(() => openLogin(), 500);
+    return { user: { email, user_metadata: { name } } };
   }
 }
 
 async function signIn(email, password) {
-  try {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
-    if (error) throw error;
+  if (supabase) {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+      if (error) throw error;
+      showNotification('Добро пожаловать!');
+      closeLogin();
+      await updateUserUI();
+      renderCards();
+      return data;
+    } catch (error) {
+      showNotification(error.message, 'error');
+      return null;
+    }
+  } else {
+    // Офлайн-режим
+    const users = JSON.parse(localStorage.getItem('ideahub_users')) || [];
+    const user = users.find(u => u.email === email && u.password === password);
+    if (!user) {
+      showNotification('Неверный email или пароль', 'error');
+      return null;
+    }
+    currentUser = { email: user.email, user_metadata: { name: user.name } };
+    localStorage.setItem('ideahub_current_user', JSON.stringify(currentUser));
     showNotification('Добро пожаловать!');
     closeLogin();
     await updateUserUI();
     renderCards();
-    return data;
-  } catch (error) {
-    showNotification(error.message, 'error');
-    return null;
+    return { user: currentUser };
   }
 }
 
 async function signOut() {
-  try {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
-    currentUser = null;
-    await updateUserUI();
-    renderCards();
-    showNotification('Вы вышли из аккаунта');
-  } catch (error) {
-    showNotification(error.message, 'error');
+  if (supabase) {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+    } catch (error) {
+      showNotification(error.message, 'error');
+      return;
+    }
   }
+  currentUser = null;
+  localStorage.removeItem('ideahub_current_user');
+  await updateUserUI();
+  renderCards();
+  showNotification('Вы вышли из аккаунта');
 }
 
 async function updateUserUI() {
-  const { data: { user } } = await supabase.auth.getUser();
-  currentUser = user;
+  if (supabase) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      currentUser = user;
+    } catch (e) {
+      currentUser = null;
+    }
+  } else {
+    const saved = localStorage.getItem('ideahub_current_user');
+    if (saved) {
+      try {
+        currentUser = JSON.parse(saved);
+      } catch (e) {
+        currentUser = null;
+      }
+    } else {
+      currentUser = null;
+    }
+  }
 
-  if (user) {
-    const name = user.user_metadata?.name || user.email?.split('@')[0] || 'Пользователь';
+  if (currentUser) {
+    const name = currentUser.user_metadata?.name || currentUser.email?.split('@')[0] || 'Пользователь';
     userGreeting.textContent = `👋 ${name}`;
     loginBtn.style.display = 'none';
     registerBtn.style.display = 'none';
     logoutBtn.style.display = 'inline-block';
     document.getElementById('profileSection').style.display = 'flex';
-    document.getElementById('profileEmail').textContent = user.email;
+    document.getElementById('profileEmail').textContent = currentUser.email;
   } else {
     userGreeting.textContent = '';
     loginBtn.style.display = 'inline-block';
@@ -142,185 +206,118 @@ async function updateUserUI() {
   }
 }
 
-// ===== КОММЕНТАРИИ =====
-async function loadComments(ideaId) {
-  try {
-    const { data, error } = await supabase
-      .from('comments')
-      .select('*')
-      .eq('idea_id', ideaId)
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-    currentIdeaComments = data || [];
-    return data;
-  } catch (error) {
-    console.error('Ошибка загрузки комментариев:', error);
-    return [];
-  }
+// ===== КОММЕНТАРИИ (локальные) =====
+function loadComments(ideaId) {
+  const allComments = JSON.parse(localStorage.getItem('ideahub_comments')) || {};
+  return allComments[ideaId] || [];
 }
 
-async function addComment(ideaId, text) {
+function saveComments(ideaId, comments) {
+  const allComments = JSON.parse(localStorage.getItem('ideahub_comments')) || {};
+  allComments[ideaId] = comments;
+  localStorage.setItem('ideahub_comments', JSON.stringify(allComments));
+}
+
+function addCommentLocal(ideaId, text) {
   if (!currentUser) {
     showNotification('Войдите, чтобы оставить комментарий', 'error');
     return;
   }
-
-  try {
-    const { data, error } = await supabase
-      .from('comments')
-      .insert({
-        idea_id: ideaId,
-        user_id: currentUser.id,
-        user_name: currentUser.user_metadata?.name || currentUser.email?.split('@')[0] || 'Аноним',
-        text: text
-      })
-      .select();
-
-    if (error) throw error;
-    showNotification('Комментарий добавлен');
-    await loadComments(ideaId);
-    // Обновляем модал
-    const idea = ideas.find(i => i.id === ideaId);
-    if (idea) openModal(idea, currentCardElement);
-    return data;
-  } catch (error) {
-    showNotification(error.message, 'error');
-    return null;
-  }
+  
+  const comments = loadComments(ideaId);
+  comments.push({
+    id: Date.now(),
+    user_name: currentUser.user_metadata?.name || currentUser.email?.split('@')[0] || 'Аноним',
+    text: text,
+    created_at: new Date().toISOString()
+  });
+  saveComments(ideaId, comments);
+  showNotification('Комментарий добавлен');
 }
 
-// ===== ЛАЙКИ (Supabase) =====
-async function toggleLikeSupabase(ideaId) {
-  if (!currentUser) {
-    showNotification('Войдите, чтобы оценить идею', 'error');
-    return;
-  }
-
-  try {
-    // Проверяем, есть ли уже лайк
-    const { data: existing } = await supabase
-      .from('likes')
-      .select('*')
-      .eq('idea_id', ideaId)
-      .eq('user_id', currentUser.id)
-      .single();
-
-    if (existing) {
-      // Удаляем лайк
-      await supabase
-        .from('likes')
-        .delete()
-        .eq('idea_id', ideaId)
-        .eq('user_id', currentUser.id);
-      
-      // Обновляем локальный счетчик
-      likes[ideaId] = (likes[ideaId] || 1) - 1;
-      if (likes[ideaId] <= 0) delete likes[ideaId];
-    } else {
-      // Добавляем лайк
-      await supabase
-        .from('likes')
-        .insert({
-          idea_id: ideaId,
-          user_id: currentUser.id
-        });
-      
-      likes[ideaId] = (likes[ideaId] || 0) + 1;
-    }
-
-    localStorage.setItem('ideahub_likes', JSON.stringify(likes));
-    renderCards();
-    return true;
-  } catch (error) {
-    console.error('Ошибка с лайком:', error);
-    showNotification('Ошибка при оценке', 'error');
-    return false;
-  }
-}
-
-// ===== ИЗБРАННОЕ (Supabase) =====
-async function toggleFavSupabase(ideaId) {
-  if (!currentUser) {
-    showNotification('Войдите, чтобы добавить в избранное', 'error');
-    return;
-  }
-
-  try {
-    const { data: existing } = await supabase
-      .from('favorites')
-      .select('*')
-      .eq('idea_id', ideaId)
-      .eq('user_id', currentUser.id)
-      .single();
-
-    if (existing) {
-      await supabase
+// ===== ИЗБРАННОЕ И ЛАЙКИ =====
+async function toggleFav(id) {
+  if (supabase && currentUser) {
+    try {
+      const { data: existing } = await supabase
         .from('favorites')
-        .delete()
-        .eq('idea_id', ideaId)
-        .eq('user_id', currentUser.id);
-      
-      favorites = favorites.filter(id => id !== ideaId);
-    } else {
-      await supabase
-        .from('favorites')
-        .insert({
-          idea_id: ideaId,
-          user_id: currentUser.id
-        });
-      
-      if (!favorites.includes(ideaId)) favorites.push(ideaId);
-    }
+        .select('*')
+        .eq('idea_id', id)
+        .eq('user_id', currentUser.id)
+        .single();
 
-    localStorage.setItem('ideahub_favs', JSON.stringify(favorites));
-    renderCards();
-    return true;
-  } catch (error) {
-    console.error('Ошибка с избранным:', error);
-    showNotification('Ошибка при сохранении', 'error');
-    return false;
-  }
-}
-
-// ===== ЗАГРУЗКА ДАННЫХ ПОЛЬЗОВАТЕЛЯ =====
-async function loadUserData() {
-  try {
-    // Загружаем избранное
-    if (currentUser) {
-      const { data: favData } = await supabase
-        .from('favorites')
-        .select('idea_id')
-        .eq('user_id', currentUser.id);
-      
-      if (favData) {
-        favorites = favData.map(f => f.idea_id);
-        localStorage.setItem('ideahub_favs', JSON.stringify(favorites));
+      if (existing) {
+        await supabase
+          .from('favorites')
+          .delete()
+          .eq('idea_id', id)
+          .eq('user_id', currentUser.id);
+        favorites = favorites.filter(f => f !== id);
+      } else {
+        await supabase
+          .from('favorites')
+          .insert({ idea_id: id, user_id: currentUser.id });
+        if (!favorites.includes(id)) favorites.push(id);
       }
-
-      // Загружаем лайки
-      const { data: likeData } = await supabase
-        .from('likes')
-        .select('idea_id')
-        .eq('user_id', currentUser.id);
-      
-      if (likeData) {
-        const newLikes = {};
-        likeData.forEach(l => {
-          newLikes[l.idea_id] = (newLikes[l.idea_id] || 0) + 1;
-        });
-        // Объединяем с существующими лайками
-        likes = { ...likes, ...newLikes };
-        localStorage.setItem('ideahub_likes', JSON.stringify(likes));
-      }
+    } catch (e) {
+      showNotification('Ошибка при сохранении', 'error');
+      return;
     }
-  } catch (error) {
-    console.error('Ошибка загрузки данных:', error);
+  } else {
+    // Локальное хранение
+    if (favorites.includes(id)) {
+      favorites = favorites.filter(f => f !== id);
+    } else {
+      favorites.push(id);
+    }
   }
+  localStorage.setItem('ideahub_favs', JSON.stringify(favorites));
+  renderCards();
+}
+
+async function toggleLike(id) {
+  if (supabase && currentUser) {
+    try {
+      const { data: existing } = await supabase
+        .from('likes')
+        .select('*')
+        .eq('idea_id', id)
+        .eq('user_id', currentUser.id)
+        .single();
+
+      if (existing) {
+        await supabase
+          .from('likes')
+          .delete()
+          .eq('idea_id', id)
+          .eq('user_id', currentUser.id);
+        likes[id] = (likes[id] || 1) - 1;
+        if (likes[id] <= 0) delete likes[id];
+      } else {
+        await supabase
+          .from('likes')
+          .insert({ idea_id: id, user_id: currentUser.id });
+        likes[id] = (likes[id] || 0) + 1;
+      }
+    } catch (e) {
+      showNotification('Ошибка при оценке', 'error');
+      return;
+    }
+  } else {
+    // Локальное хранение
+    likes[id] = (likes[id] || 0) + 1;
+  }
+  localStorage.setItem('ideahub_likes', JSON.stringify(likes));
+  renderCards();
 }
 
 // ===== ОТРИСОВКА КАРТОЧЕК =====
 function renderCards() {
+  if (!grid) {
+    console.error('❌ cardsGrid не найден!');
+    return;
+  }
+
   let filtered = ideas.filter(idea => {
     const matchCat = currentFilter === 'all' || idea.category === currentFilter;
     const matchSearch = idea.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -332,6 +329,12 @@ function renderCards() {
   else if (currentSort === 'capital') filtered.sort((a, b) => a.capital - b.capital);
 
   grid.innerHTML = '';
+  
+  if (filtered.length === 0) {
+    grid.innerHTML = `<div class="text-center text-gray-400 py-8">Идей не найдено 😕</div>`;
+    return;
+  }
+
   filtered.forEach((idea, idx) => {
     const isFav = favorites.includes(idea.id);
     const likeCount = likes[idea.id] || 0;
@@ -391,34 +394,32 @@ function handleCardClick(e) {
 async function handleFavClick(e) {
   e.stopPropagation();
   const id = parseInt(this.dataset.id);
-  await toggleFavSupabase(id);
+  await toggleFav(id);
 }
 
 async function handleLikeClick(e) {
   e.stopPropagation();
   const id = parseInt(this.dataset.id);
-  await toggleLikeSupabase(id);
+  await toggleLike(id);
 }
 
 // ===== МОДАЛ С АНИМАЦИЕЙ =====
 let isModalOpen = false;
 let currentCardElement = null;
 
-async function openModal(idea, cardElement) {
+function openModal(idea, cardElement) {
   if (isModalOpen) return;
   isModalOpen = true;
   currentCardElement = cardElement;
 
-  // Загружаем комментарии
-  await loadComments(idea.id);
-
   const isFav = favorites.includes(idea.id);
   const likeCount = likes[idea.id] || 0;
+  const comments = loadComments(idea.id);
 
   modalContent.innerHTML = `
     <div class="space-y-4">
       <div class="flex justify-between items-start">
-        <h2 class="text-3xl font-bold">${idea.name}</h2>
+        <h2 class="text-2xl md:text-3xl font-bold">${idea.name}</h2>
         <button class="fav-btn ${isFav ? 'active' : ''}" data-id="${idea.id}">${isFav ? '❤️' : '🤍'}</button>
       </div>
       <div class="flex flex-wrap gap-2">
@@ -437,11 +438,10 @@ async function openModal(idea, cardElement) {
       <div><span class="text-gray-400">Как начать:</span> ${idea.how}</div>
       <div><span class="text-gray-400">Риски:</span> ${idea.risks}</div>
       
-      <!-- Комментарии -->
       <div class="comments-section">
-        <h4 class="font-semibold mb-3">Комментарии (${currentIdeaComments.length})</h4>
+        <h4 class="font-semibold mb-3">Комментарии (${comments.length})</h4>
         <div class="comments-list">
-          ${currentIdeaComments.map(c => `
+          ${comments.map(c => `
             <div class="comment-item">
               <div class="comment-author">${c.user_name}</div>
               <div class="comment-text">${c.text}</div>
@@ -461,14 +461,14 @@ async function openModal(idea, cardElement) {
   modalContent.querySelector('.fav-btn')?.addEventListener('click', async (e) => {
     e.stopPropagation();
     const id = parseInt(e.target.dataset.id);
-    await toggleFavSupabase(id);
+    await toggleFav(id);
     openModal(ideas.find(i => i.id === id), currentCardElement);
   });
 
   modalContent.querySelector('.like-btn')?.addEventListener('click', async (e) => {
     e.stopPropagation();
     const id = parseInt(e.target.dataset.id);
-    await toggleLikeSupabase(id);
+    await toggleLike(id);
     openModal(ideas.find(i => i.id === id), currentCardElement);
   });
 
@@ -476,12 +476,16 @@ async function openModal(idea, cardElement) {
   const commentInput = modalContent.querySelector('#commentInput');
   const commentBtn = modalContent.querySelector('#commentSubmitBtn');
   
-  commentBtn?.addEventListener('click', async () => {
+  commentBtn?.addEventListener('click', () => {
     const text = commentInput.value.trim();
     if (text) {
-      await addComment(idea.id, text);
+      if (supabase && currentUser) {
+        // TODO: Реализовать комментарии через Supabase
+        addCommentLocal(idea.id, text);
+      } else {
+        addCommentLocal(idea.id, text);
+      }
       commentInput.value = '';
-      // Переоткрываем модал для обновления
       openModal(idea, currentCardElement);
     }
   });
@@ -496,10 +500,11 @@ async function openModal(idea, cardElement) {
   const windowHeight = window.innerHeight;
 
   modalOverlay.classList.add('active');
+  document.body.classList.add('modal-open');
 
   if (rect) {
-    const scaleX = rect.width / 700;
-    const scaleY = rect.height / (windowHeight * 0.9);
+    const scaleX = Math.min(rect.width / 700, 0.8);
+    const scaleY = Math.min(rect.height / (windowHeight * 0.9), 0.8);
     const scale = Math.min(scaleX, scaleY, 0.8);
     const translateX = (rect.left + rect.width / 2) - windowWidth / 2;
     const translateY = (rect.top + rect.height / 2) - windowHeight / 2;
@@ -524,8 +529,8 @@ function closeModal() {
   const windowHeight = window.innerHeight;
 
   if (rect) {
-    const scaleX = rect.width / 700;
-    const scaleY = rect.height / (windowHeight * 0.9);
+    const scaleX = Math.min(rect.width / 700, 0.8);
+    const scaleY = Math.min(rect.height / (windowHeight * 0.9), 0.8);
     const scale = Math.min(scaleX, scaleY, 0.8);
     const translateX = (rect.left + rect.width / 2) - windowWidth / 2;
     const translateY = (rect.top + rect.height / 2) - windowHeight / 2;
@@ -540,6 +545,7 @@ function closeModal() {
 
   setTimeout(() => {
     modalOverlay.classList.remove('active');
+    document.body.classList.remove('modal-open');
     modalWindow.style.transform = '';
     modalWindow.style.opacity = '';
     modalWindow.style.transition = '';
@@ -664,13 +670,22 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   // Проверяем авторизацию
   await updateUserUI();
-  await loadUserData();
   
   renderCards();
-  lucide.createIcons();
+  
+  // Инициализация иконок Lucide
+  if (typeof lucide !== 'undefined' && lucide.createIcons) {
+    lucide.createIcons();
+  }
 
   // GSAP для hero
-  gsap.from('.hero-title', { opacity: 0, y: 50, duration: 1, ease: 'power2.out' });
-  gsap.from('.hero-subtitle', { opacity: 0, y: 30, duration: 1, delay: 0.2, ease: 'power2.out' });
-  gsap.from('.hero-btn', { opacity: 0, scale: 0.8, duration: 0.8, delay: 0.4, ease: 'back.out(1.7)' });
+  if (typeof gsap !== 'undefined') {
+    gsap.from('.hero-title', { opacity: 0, y: 50, duration: 1, ease: 'power2.out' });
+    gsap.from('.hero-subtitle', { opacity: 0, y: 30, duration: 1, delay: 0.2, ease: 'power2.out' });
+    gsap.from('.hero-btn', { opacity: 0, scale: 0.8, duration: 0.8, delay: 0.4, ease: 'back.out(1.7)' });
+  }
+
+  console.log('✅ IdeaHub загружен!');
+  console.log(`📊 Всего идей: ${ideas.length}`);
+  console.log(`💾 Режим: ${supabase ? 'Supabase' : 'Локальный'}`);
 });
