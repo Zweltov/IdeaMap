@@ -10,8 +10,6 @@
   <!-- GSAP для анимаций -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
-  <!-- Supabase (опционально) -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <!-- Подключаем стили -->
   <link rel="stylesheet" href="style.css" />
 </head>
@@ -30,13 +28,20 @@
         <span class="logo-text">IdeaHub</span>
       </div>
       <div class="navbar-actions">
-        <span id="userGreeting" class="user-greeting"></span>
-        <button class="nav-btn settings-btn" id="settingsBtn" aria-label="Настройки">
-          <i data-lucide="settings"></i>
-        </button>
-        <button class="nav-btn glass-btn" id="loginBtn">Войти</button>
-        <button class="nav-btn glass-btn primary" id="registerBtn">Регистрация</button>
-        <button class="nav-btn glass-btn" id="logoutBtn" style="display:none;">Выйти</button>
+        <!-- Блок для авторизованного пользователя -->
+        <div id="userInfo" style="display:none;" class="user-info">
+          <span class="user-avatar" id="userAvatar">👤</span>
+          <span class="user-name" id="userName">Пользователь</span>
+          <button class="nav-btn glass-btn" id="logoutBtn">Выйти</button>
+        </div>
+        <!-- Блок для гостя -->
+        <div id="guestActions">
+          <button class="nav-btn settings-btn" id="settingsBtn" aria-label="Настройки">
+            <i data-lucide="settings"></i>
+          </button>
+          <button class="nav-btn glass-btn" id="loginBtn">Войти</button>
+          <button class="nav-btn glass-btn primary" id="registerBtn">Регистрация</button>
+        </div>
       </div>
     </div>
   </header>
@@ -57,7 +62,7 @@
       <div class="catalog-controls">
         <h2 class="catalog-title">Каталог идей</h2>
         <div class="controls-group">
-          <input id="searchInput" type="text" placeholder="Поиск..." class="search-input" />
+          <input id="searchInput" type="text" placeholder="Поиск идей..." class="search-input" />
           <div class="filter-group" id="filterContainer">
             <span class="filter-pill active" data-filter="all">Все</span>
             <span class="filter-pill" data-filter="IT">IT</span>
@@ -114,9 +119,9 @@
     <div class="modal-window glass auth-window">
       <button class="modal-close" id="loginCloseBtn">&times;</button>
       <h3 class="auth-title">Вход</h3>
-      <form id="loginForm" class="auth-form">
+      <form id="loginForm" class="auth-form" autocomplete="off">
         <input type="email" id="loginEmail" placeholder="Email" required />
-        <input type="password" id="loginPassword" placeholder="Пароль" required />
+        <input type="password" id="loginPassword" placeholder="Пароль" required minlength="6" />
         <button type="submit" class="btn-glow">Войти</button>
       </form>
       <p class="auth-switch">Нет аккаунта? <span id="switchToRegister">Регистрация</span></p>
@@ -129,10 +134,11 @@
     <div class="modal-window glass auth-window">
       <button class="modal-close" id="registerCloseBtn">&times;</button>
       <h3 class="auth-title">Регистрация</h3>
-      <form id="registerForm" class="auth-form">
-        <input type="text" id="registerName" placeholder="Имя" required />
+      <form id="registerForm" class="auth-form" autocomplete="off">
+        <input type="text" id="registerName" placeholder="Имя пользователя" required minlength="2" />
         <input type="email" id="registerEmail" placeholder="Email" required />
-        <input type="password" id="registerPassword" placeholder="Пароль (минимум 6 символов)" required minlength="6" />
+        <input type="password" id="registerPassword" placeholder="Пароль (мин. 6 символов)" required minlength="6" />
+        <input type="password" id="registerConfirmPassword" placeholder="Подтвердите пароль" required minlength="6" />
         <button type="submit" class="btn-glow">Создать аккаунт</button>
       </form>
       <p class="auth-switch">Уже есть аккаунт? <span id="switchToLogin">Войти</span></p>
