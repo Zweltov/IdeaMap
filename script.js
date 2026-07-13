@@ -39,25 +39,69 @@ let currentCardElement = null;
 let isRegisterMode = false;
 let articles = [];
 
-// ===== УВЕДОМЛЕНИЯ =====
-function showNotification(message, type = 'success') {
-  const existing = document.querySelector('.notification');
-  if (existing) existing.remove();
+// ===== КРАСИВЫЕ УВЕДОМЛЕНИЯ (TOASTS) =====
+function showNotification(message, type = 'success', duration = 3000) {
+  const container = document.getElementById('toastContainer');
+  if (!container) return;
+  
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  
+  // Добавляем иконку в зависимости от типа
+  let iconName = type === 'error' ? 'alert-circle' : 'check-circle';
+  let iconColor = type === 'error' ? '#ff4d4d' : 'var(--accent-color)';
 
-  const notif = document.createElement('div');
-  notif.className = `notification ${type}`;
-  notif.textContent = message;
-  document.body.appendChild(notif);
+  toast.innerHTML = `
+    <i data-lucide="${iconName}" style="color: ${iconColor};"></i>
+    <div class="toast-content">${message}</div>
+    <button class="toast-close"><i data-lucide="x" style="width:18px;height:18px;"></i></button>
+    <div class="toast-progress" style="animation-duration: ${duration}ms;"></div>
+  `;
+  container.appendChild(toast);
+  
+  if(window.lucide) lucide.createIcons({root: toast});
 
-  setTimeout(() => notif.classList.add('show'), 10);
-  setTimeout(() => {
-    notif.classList.remove('show');
-    setTimeout(() => notif.remove(), 400);
-  }, 3000);
+  // Плавное появление
+  setTimeout(() => toast.classList.add('show'), 10);
+
+  // Удаление по таймеру
+  let timeout = setTimeout(() => closeToast(toast), duration);
+
+  // Закрытие по крестику
+  const closeBtn = toast.querySelector('.toast-close');
+  closeBtn.onclick = () => {
+      clearTimeout(timeout);
+      closeToast(toast);
+  };
+}
+
+function closeToast(toast) {
+  toast.classList.remove('show');
+  setTimeout(() => toast.remove(), 400); // ждем конец css транзиции
+}
+
+// Перевод ошибок Supabase
+function translateError(msg) {
+  const translations = {
+    "Invalid login credentials": "Неверный логин или пароль",
+    "Email not confirmed": "Подтвердите электронную почту",
+    "User already registered": "Пользователь с таким email уже существует",
+    "Password should be at least 6 characters": "Пароль должен быть не менее 6 символов"
+  };
+  return translations[msg] || msg;
+}
+
+// ===== ТРЕКИНГ ПРОСМОТРОВ =====
+function recordView(type) {
+  if (!currentUser) return;
+  const key = `ideahub_views_${currentUser.id}`;
+  let views = JSON.parse(localStorage.getItem(key)) || { ideas: 0, articles: 0 };
+  views[type] = (views[type] || 0) + 1;
+  localStorage.setItem(key, JSON.stringify(views));
 }
 
 // =======================================================================
-// ВКЛАДКИ ВЕРХНЕЙ ПАНЕЛИ + СКОЛЬЗЯЩИЙ ИНДИКАТОР
+// ВКЛАДКИ ВЕРХНЕЙ ПАНЕЛИ
 // =======================================================================
 const navTabs = document.querySelectorAll('.nav-tab');
 const navIndicator = document.getElementById('navIndicator');
@@ -91,12 +135,14 @@ window.addEventListener('resize', () => {
 });
 
 // =======================================================================
-// АВТОРИЗАЦИЯ (модальное окно #authModal)
+// АВТОРИЗАЦИЯ И UI ПОЛЬЗОВАТЕЛЯ
 // =======================================================================
 const authModal = document.getElementById('authModal');
 const authBtn = document.getElementById('authBtn');
+const navAvatarBtn = document.getElementById('navAvatarBtn');
 const closeAuthBtn = document.getElementById('closeAuth');
 const authForm = document.getElementById('authForm');
+const authErrorMsg = document.getElementById('authErrorMsg');
 const modalTitle = document.getElementById('modalTitle');
 const modalSub = document.getElementById('modalSub');
 const nameFieldGroup = document.getElementById('nameFieldGroup');
@@ -108,15 +154,18 @@ const toggleAuthText = document.getElementById('toggleAuthText');
 const toggleAuthLink = document.getElementById('toggleAuthLink');
 
 function openAuthModal() {
+  authErrorMsg.style.display = 'none'; // прячем ошибки при открытии
   authModal.style.display = 'flex';
 }
 function closeAuthModal() {
   authModal.style.display = 'none';
   authForm?.reset();
+  authErrorMsg.style.display = 'none';
 }
 
 function setAuthMode(registerMode) {
   isRegisterMode = registerMode;
+  authErrorMsg.style.display = 'none';
   if (registerMode) {
     modalTitle.textContent = 'Регистрация';
     modalSub.textContent = 'Создайте аккаунт, чтобы сохранять идеи и оставлять комментарии';
@@ -135,23 +184,23 @@ function setAuthMode(registerMode) {
 }
 
 function updateAuthButton() {
-  if (!authBtn) return;
   if (currentUser) {
-    const name = currentUser.user_metadata?.name || currentUser.email?.split('@')[0] || 'Профиль';
-    authBtn.textContent = `👋 ${name} · Выйти`;
+    authBtn.style.display = 'none';
+    navAvatarBtn.style.display = 'block';
+    const name = currentUser.user_metadata?.name || currentUser.email?.split('@')[0] || 'User';
+    const avatarUrl = currentUser.user_metadata?.avatar || `https://ui-avatars.com/api/?name=${name}&background=00ffcc&color=0b0d10&bold=true`;
+    navAvatarBtn.src = avatarUrl;
   } else {
-    authBtn.textContent = 'Войти / Регистрация';
+    authBtn.style.display = 'block';
+    navAvatarBtn.style.display = 'none';
   }
 }
 
 authBtn?.addEventListener('click', () => {
-  if (currentUser) {
-    signOut();
-  } else {
-    setAuthMode(false);
-    openAuthModal();
-  }
+  setAuthMode(false);
+  openAuthModal();
 });
+
 closeAuthBtn?.addEventListener('click', closeAuthModal);
 authModal?.addEventListener('click', (e) => {
   if (e.target === authModal) closeAuthModal();
@@ -163,6 +212,7 @@ toggleAuthLink?.addEventListener('click', (e) => {
 
 authForm?.addEventListener('submit', async (e) => {
   e.preventDefault();
+  authErrorMsg.style.display = 'none'; // сброс ошибки перед запросом
   const email = authEmailInput.value;
   const password = authPasswordInput.value;
 
@@ -187,7 +237,8 @@ async function signUp(email, password, name) {
     showNotification('Аккаунт создан! Проверьте почту для подтверждения.');
     return data;
   } catch (error) {
-    showNotification(error.message, 'error');
+    authErrorMsg.textContent = translateError(error.message);
+    authErrorMsg.style.display = 'block';
     return null;
   }
 }
@@ -201,7 +252,8 @@ async function signIn(email, password) {
     renderCards();
     return data;
   } catch (error) {
-    showNotification(error.message, 'error');
+    authErrorMsg.textContent = translateError(error.message);
+    authErrorMsg.style.display = 'block';
     return null;
   }
 }
@@ -215,7 +267,7 @@ async function signOut() {
     renderCards();
     showNotification('Вы вышли из аккаунта');
   } catch (error) {
-    showNotification(error.message, 'error');
+    showNotification(translateError(error.message), 'error');
   }
 }
 
@@ -224,6 +276,210 @@ async function updateUserUI() {
   currentUser = user;
   updateAuthButton();
 }
+
+// =======================================================================
+// ПРОФИЛЬ (ОКНО И CROP АВАТАРКИ)
+// =======================================================================
+const userProfileModal = document.getElementById('userProfileModal');
+const profileLogoutBtn = document.getElementById('profileLogoutBtn');
+const accSwitchBtn = document.getElementById('accSwitchBtn');
+const accSwitchMenu = document.getElementById('accSwitchMenu');
+const accSwitchIcon = document.getElementById('accSwitchIcon');
+
+async function loadProfileStats() {
+  if (!currentUser) return;
+  
+  const created = new Date(currentUser.created_at);
+  const diffTime = Math.abs(Date.now() - created);
+  const diffDays = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+  document.getElementById('statAge').textContent = `${diffDays} дн.`;
+
+  const viewsKey = `ideahub_views_${currentUser.id}`;
+  const views = JSON.parse(localStorage.getItem(viewsKey)) || { ideas: 0, articles: 0 };
+  document.getElementById('statIdeas').textContent = views.ideas;
+  document.getElementById('statArticles').textContent = views.articles;
+
+  try {
+    const { count: upvotesCount } = await supabaseClient
+      .from('likes')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', currentUser.id);
+    
+    const { count: commentsCount } = await supabaseClient
+      .from('comments')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', currentUser.id);
+
+    document.getElementById('statUpvotes').textContent = upvotesCount || 0;
+    document.getElementById('statComments').textContent = commentsCount || 0;
+  } catch (err) {
+    console.error("Ошибка загрузки статистики БД:", err);
+  }
+}
+
+navAvatarBtn?.addEventListener('click', () => {
+  const name = currentUser.user_metadata?.name || currentUser.email?.split('@')[0] || 'Пользователь';
+  const avatarUrl = currentUser.user_metadata?.avatar || `https://ui-avatars.com/api/?name=${name}&background=00ffcc&color=0b0d10&bold=true`;
+  
+  document.getElementById('profileModalName').textContent = name;
+  document.getElementById('profileModalEmail').textContent = currentUser.email;
+  document.getElementById('profileModalAvatar').src = avatarUrl;
+
+  // Показываем окно сразу (без задержки)
+  userProfileModal.classList.add('active');
+  if (window.lucide) lucide.createIcons();
+
+  // Асинхронно грузим стату
+  loadProfileStats();
+});
+
+document.getElementById('userProfileClose')?.addEventListener('click', () => {
+  userProfileModal.classList.remove('active');
+  accSwitchMenu?.classList.remove('expanded');
+  accSwitchIcon.style.transform = 'rotate(0deg)';
+});
+document.getElementById('userProfileBackdrop')?.addEventListener('click', () => {
+  userProfileModal.classList.remove('active');
+  accSwitchMenu?.classList.remove('expanded');
+  accSwitchIcon.style.transform = 'rotate(0deg)';
+});
+
+// Inline раскрытие мультиаккаунтов
+accSwitchBtn?.addEventListener('click', () => {
+  const isExpanded = accSwitchMenu.classList.contains('expanded');
+  if (isExpanded) {
+    accSwitchMenu.classList.remove('expanded');
+    accSwitchIcon.style.transform = 'rotate(0deg)';
+  } else {
+    accSwitchMenu.classList.add('expanded');
+    accSwitchIcon.style.transform = 'rotate(180deg)';
+  }
+});
+
+profileLogoutBtn?.addEventListener('click', () => {
+  userProfileModal.classList.remove('active');
+  signOut();
+});
+
+// -- Логика обрезки фото --
+const cropModal = document.getElementById('cropModal');
+const avatarUpload = document.getElementById('avatarUpload');
+const cropCanvas = document.getElementById('cropCanvas');
+const ctx = cropCanvas?.getContext('2d');
+const applyCropBtn = document.getElementById('applyCropBtn');
+const cropZoom = document.getElementById('cropZoom');
+let currentUploadImage = null;
+
+// Переменные для перетаскивания (смещения фото)
+let cropOffsetX = 0;
+let cropOffsetY = 0;
+let isDraggingCrop = false;
+let startDragX = 0;
+let startDragY = 0;
+
+document.getElementById('changeAvatarBtn')?.addEventListener('click', () => {
+  avatarUpload.click();
+});
+
+avatarUpload?.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      currentUploadImage = new Image();
+      currentUploadImage.onload = () => {
+        cropZoom.value = 1; 
+        cropOffsetX = 0; // Сброс смещения
+        cropOffsetY = 0;
+        cropModal.classList.add('active');
+        drawCrop();
+      };
+      currentUploadImage.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+});
+
+// Обработчики таскания (drag)
+function handleDragStart(x, y) {
+  isDraggingCrop = true;
+  startDragX = x - cropOffsetX;
+  startDragY = y - cropOffsetY;
+}
+function handleDragMove(x, y) {
+  if (!isDraggingCrop) return;
+  cropOffsetX = x - startDragX;
+  cropOffsetY = y - startDragY;
+  drawCrop();
+}
+function handleDragEnd() {
+  isDraggingCrop = false;
+}
+
+// Мышь
+cropCanvas?.addEventListener('mousedown', (e) => handleDragStart(e.clientX, e.clientY));
+cropCanvas?.addEventListener('mousemove', (e) => handleDragMove(e.clientX, e.clientY));
+window.addEventListener('mouseup', handleDragEnd);
+
+// Тачи (телефоны)
+cropCanvas?.addEventListener('touchstart', (e) => handleDragStart(e.touches[0].clientX, e.touches[0].clientY));
+cropCanvas?.addEventListener('touchmove', (e) => {
+  e.preventDefault(); // запрещаем скролл страницы при таскании фото
+  handleDragMove(e.touches[0].clientX, e.touches[0].clientY);
+});
+window.addEventListener('touchend', handleDragEnd);
+
+
+function drawCrop() {
+  if (!currentUploadImage || !ctx) return;
+  const zoom = parseFloat(cropZoom.value);
+  const size = 300; 
+  cropCanvas.width = size;
+  cropCanvas.height = size;
+  
+  const scaledWidth = currentUploadImage.width * zoom;
+  const scaledHeight = currentUploadImage.height * zoom;
+  
+  // Учитываем смещение cropOffsetX/Y
+  const dx = (size - scaledWidth) / 2 + cropOffsetX;
+  const dy = (size - scaledHeight) / 2 + cropOffsetY;
+
+  ctx.clearRect(0,0, size, size);
+  ctx.drawImage(currentUploadImage, 0, 0, currentUploadImage.width, currentUploadImage.height, dx, dy, scaledWidth, scaledHeight);
+}
+
+cropZoom?.addEventListener('input', drawCrop);
+
+document.getElementById('cancelCropBtn')?.addEventListener('click', () => {
+  cropModal.classList.remove('active');
+  avatarUpload.value = '';
+});
+
+applyCropBtn?.addEventListener('click', async () => {
+  if (!currentUser) return;
+  
+  const base64Avatar = cropCanvas.toDataURL('image/jpeg', 0.8);
+  applyCropBtn.textContent = 'Сохранение...';
+  
+  try {
+    const { data, error } = await supabaseClient.auth.updateUser({
+      data: { avatar: base64Avatar }
+    });
+    if (error) throw error;
+    
+    showNotification("Аватар успешно обновлён!");
+    currentUser = data.user;
+    updateAuthButton();
+    document.getElementById('profileModalAvatar').src = base64Avatar;
+    cropModal.classList.remove('active');
+  } catch (err) {
+    showNotification("Ошибка обновления аватара", "error");
+  } finally {
+    applyCropBtn.textContent = 'Применить';
+    avatarUpload.value = '';
+  }
+});
+
 
 // =======================================================================
 // КОММЕНТАРИИ
@@ -265,13 +521,13 @@ async function addComment(ideaId, text) {
     showNotification('Комментарий добавлен');
     return data;
   } catch (error) {
-    showNotification(error.message, 'error');
+    showNotification(translateError(error.message), 'error');
     return null;
   }
 }
 
 // =======================================================================
-// ЛАЙКИ И ИЗБРАННОЕ (Supabase)
+// АПВОУТЫ И ИЗБРАННОЕ (Supabase)
 // =======================================================================
 async function toggleLikeSupabase(ideaId) {
   if (!currentUser) {
@@ -377,14 +633,14 @@ function renderIdeaCard(idea) {
     <div class="glass-card" data-id="${idea.id}">
       <span class="card-badge">${idea.category}</span>
       <button class="card-favorite ${isFav ? 'active' : ''}" data-fav="${idea.id}" aria-label="В избранное">
-        <i data-lucide="heart"></i>
+        <i data-lucide="arrow-up"></i>
       </button>
       <h3 class="card-title">${idea.name}</h3>
       <p class="card-desc">${idea.desc}</p>
       <div class="card-meta">
         <span class="meta-item"><i data-lucide="wallet"></i> от ${idea.capital.toLocaleString('ru-RU')} ₽</span>
         <span class="meta-item"><i data-lucide="star"></i> ${idea.rating.toFixed(1)}</span>
-        <span class="meta-item"><i data-lucide="thumbs-up"></i> ${likeCount}</span>
+        <span class="meta-item"><i data-lucide="arrow-up"></i> ${likeCount}</span>
       </div>
     </div>`;
 }
@@ -465,6 +721,8 @@ const detailsCloseBtn = document.getElementById('detailsCloseBtn');
 const modalDynamicContent = document.getElementById('modalDynamicContent');
 
 function openIdeaModal(idea, cardEl) {
+  recordView('ideas'); 
+  
   currentCardElement = cardEl;
   const isFav = favorites.includes(idea.id);
 
@@ -485,7 +743,7 @@ function openIdeaModal(idea, cardEl) {
       <h3><i data-lucide="rocket"></i> Как начать</h3><p>${idea.how}</p>
       <h3><i data-lucide="alert-triangle"></i> Риски</h3><p>${idea.risks}</p>
     </div>
-    <button class="btn-glow" id="favToggleBtn" style="margin-top:1rem;">${isFav ? '★ В избранном' : '☆ Добавить в избранное'}</button>
+    <button class="btn-glow" id="favToggleBtn" style="margin-top:1rem;">${isFav ? 'В избранном' : 'Добавить в избранное'}</button>
     <div class="comments-section" id="commentsSection">Загрузка комментариев...</div>
   `;
 
@@ -596,6 +854,8 @@ async function renderArticles() {
 }
 
 function openArticleModal(article) {
+  recordView('articles'); 
+  
   modalDynamicContent.innerHTML = `
     <span class="modal-badge">${article.category}</span>
     <h2>${article.title}</h2>
