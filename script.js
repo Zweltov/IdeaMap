@@ -765,3 +765,155 @@ document.addEventListener('DOMContentLoaded', async () => {
     gsap.from('.hero-subtitle', { opacity: 0, y: 30, duration: 1, delay: 0.2, ease: 'power2.out' });
   }
 });
+
+// =======================================================================
+// ЛОГИКА ПРОФИЛЯ, СТАТИСТИКИ И АВАТАРА
+// =======================================================================
+const authBtnElement = document.getElementById('authBtn');
+const userProfileNav = document.getElementById('userProfileNav');
+const profilePopover = document.getElementById('profilePopover');
+const navAvatar = document.getElementById('navAvatar');
+const popoverAvatar = document.getElementById('popoverAvatar');
+const profileName = document.getElementById('profileName');
+const profileAge = document.getElementById('profileAge');
+
+// Заменяем старую функцию
+async function updateAuthButton() {
+  const { data: { user } } = await supabaseClient.auth.getUser();
+  currentUser = user;
+  
+  if (currentUser) {
+    authBtnElement.style.display = 'none';
+    userProfileNav.style.display = 'block';
+    
+    const name = currentUser.user_metadata?.name || currentUser.email?.split('@')[0] || 'Пользователь';
+    profileName.textContent = name;
+    
+    // Вычисляем возраст аккаунта
+    const createdDate = new Date(currentUser.created_at);
+    const days = Math.floor((new Date() - createdDate) / (1000 * 60 * 60 * 24));
+    profileAge.textContent = `В IdeaHub ${days} ${days === 1 ? 'день' : 'дней'}`;
+    
+    // Аватарка (из метаданных, если есть, иначе генерация)
+    const avatarUrl = currentUser.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${name}&background=00ffcc&color=0b0d10`;
+    navAvatar.src = avatarUrl;
+    popoverAvatar.src = avatarUrl;
+    
+    loadUserStats();
+  } else {
+    authBtnElement.style.display = 'block';
+    userProfileNav.style.display = 'none';
+    profilePopover.classList.remove('active');
+  }
+}
+
+// Открытие/закрытие окна профиля
+userProfileNav.addEventListener('click', (e) => {
+  e.stopPropagation();
+  profilePopover.classList.toggle('active');
+});
+
+// Закрытие при клике вне окна
+document.addEventListener('click', (e) => {
+  if (!profilePopover.contains(e.target) && !userProfileNav.contains(e.target)) {
+    profilePopover.classList.remove('active');
+    document.getElementById('multiAccountMenu').classList.remove('active');
+  }
+});
+
+// Загрузка статистики из БД
+async function loadUserStats() {
+  if (!currentUser) return;
+  
+  // Отзывы
+  const { count: commentsCount } = await supabaseClient
+    .from('comments').select('*', { count: 'exact', head: true })
+    .eq('user_id', currentUser.id);
+  document.getElementById('statComments').textContent = commentsCount || 0;
+
+  // Апвоуты (Лайки)
+  const { count: upvotesCount } = await supabaseClient
+    .from('likes').select('*', { count: 'exact', head: true })
+    .eq('user_id', currentUser.id);
+  document.getElementById('statUpvotes').textContent = upvotesCount || 0;
+  
+  // Просмотры (пока сохраняем локально, так как таблицы views в БД нет)
+  const views = JSON.parse(localStorage.getItem('ideahub_views')) || { articles: 0, ideas: 0 };
+  document.getElementById('statArticles').textContent = views.articles;
+  document.getElementById('statIdeas').textContent = views.ideas;
+}
+
+// Кнопка Выйти в профиле
+document.getElementById('logoutBtn')?.addEventListener('click', () => {
+  profilePopover.classList.remove('active');
+  signOut();
+});
+
+// Меню нескольких аккаунтов (три точки)
+document.getElementById('multiAccountBtn')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  document.getElementById('multiAccountMenu').classList.toggle('active');
+});
+
+// =======================================================================
+// ЛОГИКА ОБРЕЗКИ И ЗАГРУЗКИ ФОТО (Cropper.js)
+// =======================================================================
+let cropper = null;
+const avatarUpload = document.getElementById('avatarUpload');
+const changeAvatarBtn = document.getElementById('changeAvatarBtn');
+const cropperModal = document.getElementById('cropperModalOverlay');
+const imageToCrop = document.getElementById('imageToCrop');
+
+changeAvatarBtn?.addEventListener('click', () => avatarUpload.click());
+
+avatarUpload?.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      imageToCrop.src = event.target.result;
+      cropperModal.classList.add('active');
+      if (cropper) cropper.destroy();
+      
+      // Инициализация кроппера: 1:1 для круглого аватара
+      cropper = new Cropper(imageToCrop, {
+        aspectRatio: 1,
+        viewMode: 1,
+        dragMode: 'move',
+        autoCropArea: 0.9,
+        cropBoxResizable: true
+      });
+    };
+    reader.readAsDataURL(file);
+  }
+});
+
+document.getElementById('cancelCropBtn')?.addEventListener('click', () => {
+  cropperModal.classList.remove('active');
+  avatarUpload.value = ''; // сброс инпута
+});
+
+document.getElementById('applyCropBtn')?.addEventListener('click', async () => {
+  if (!cropper) return;
+  const canvas = cropper.getCroppedCanvas({ width: 256, height: 256 });
+  
+  // Обновляем UI локально сразу
+  const newAvatarUrl = canvas.toDataURL();
+  navAvatar.src = newAvatarUrl;
+  popoverAvatar.src = newAvatarUrl;
+  cropperModal.classList.remove('active');
+  showNotification('Аватар обновляется...');
+
+  // Сохраняем в Supabase (В user_metadata)
+  // В идеале изображение нужно грузить в Supabase Storage, а сюда сохранять URL.
+  // Так как Storage у нас пока не настроен, мы сохраним Base64 в метадату (подходит для малых фото).
+  try {
+    const { error } = await supabaseClient.auth.updateUser({
+      data: { avatar_url: newAvatarUrl }
+    });
+    if (error) throw error;
+    showNotification('Аватар успешно обновлен!');
+  } catch (err) {
+    showNotification('Ошибка сохранения аватара', 'error');
+  }
+});
