@@ -43,7 +43,13 @@
 
       <div class="navbar-right">
         <div class="navbar-glass-auth">
-          <button class="btn-glow btn-auth-wide" id="authBtn">Войти / Регистрация</button>
+          <div class="auth-container">
+            <button class="btn-glow btn-auth-wide" id="authBtn">Войти / Регистрация</button>
+            
+            <div id="userProfileTrigger" class="profile-avatar-trigger" style="display: none;">
+              <img id="headerAvatar" src="https://api.dicebear.com/7.x/bottts/svg?seed=IdeaHub" alt="Avatar">
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -120,6 +126,76 @@
 
   </main>
 
+  <div id="profileDropdown" class="profile-dropdown">
+    <div class="profile-dropdown-scrollable">
+      <div class="profile-dropdown-header">
+        <div class="avatar-wrapper">
+          <img id="dropdownAvatar" src="https://api.dicebear.com/7.x/bottts/svg?seed=IdeaHub" alt="Avatar">
+          <label for="avatarInput" class="avatar-edit-btn" title="Изменить фото">
+            <i data-lucide="camera"></i>
+          </label>
+          <input type="file" id="avatarInput" accept="image/*" style="display: none;">
+        </div>
+        <h3 id="profileName">Имя Пользователя</h3>
+        <p id="profileEmail">user@example.com</p>
+      </div>
+
+      <div class="profile-stats-grid">
+        <div class="stat-card">
+          <i data-lucide="message-square"></i>
+          <span class="stat-value" id="statComments">0</span>
+          <span class="stat-label">Отзывов</span>
+        </div>
+        <div class="stat-card">
+          <i data-lucide="arrow-up-circle"></i>
+          <span class="stat-value" id="statLikes">0</span>
+          <span class="stat-label">Рейтинг +</span>
+        </div>
+        <div class="stat-card">
+          <i data-lucide="book-open"></i>
+          <span class="stat-value" id="statArticles">0</span>
+          <span class="stat-label">Статей</span>
+        </div>
+        <div class="stat-card">
+          <i data-lucide="eye"></i>
+          <span class="stat-value" id="statViews">0</span>
+          <span class="stat-label">Идей</span>
+        </div>
+      </div>
+
+      <div class="profile-info-box">
+        <div class="info-item">
+          <span class="info-label">Возраст аккаунта:</span>
+          <span class="info-value" id="accountAge">0 дней</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Статус:</span>
+          <span class="info-value">Инвестор IdeaHub</span>
+        </div>
+      </div>
+
+      <div id="multiAccountsSection" class="multi-accounts-section">
+        <h4>Быстрое переключение</h4>
+        <div id="accountsList" class="accounts-list">
+          </div>
+        <button id="addAccountBtn" class="btn-subtle"><i data-lucide="plus"></i> Добавить аккаунт</button>
+      </div>
+
+      <div class="profile-footer-scroll">
+        <button id="multiAccToggleBtn" class="btn-icon" title="Управление аккаунтами">
+          <i data-lucide="more-horizontal"></i>
+        </button>
+        <button id="logoutBtn" class="btn-danger"><i data-lucide="log-out"></i> Выйти</button>
+      </div>
+    </div>
+
+    <div class="profile-fixed-settings">
+      <button id="settingsBtn" class="btn-settings">
+        <i data-lucide="settings"></i> Настройки профиля
+      </button>
+    </div>
+  </div>
+
   <div id="detailsModal" class="modal-overlay">
     <div class="modal-backdrop" id="detailsBackdrop"></div>
     <div class="modal-window glass">
@@ -130,7 +206,7 @@
 
   <script src="script.js" defer></script>
   
-    <div id="authModal" class="modal" style="display: none;">
+  <div id="authModal" class="modal" style="display: none;">
     <div class="modal-content glass">
       <span class="close-modal" id="closeAuth">&times;</span>
       <h2 id="modalTitle">Вход в систему</h2>
@@ -159,5 +235,20 @@
     </div>
   </div>
 
+  <div id="cropModal" class="auth-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 2000; align-items: center; justify-content: center;">
+    <div class="glass-card modal-content" style="max-width: 400px; width: 90%; text-align: center; background: #0f1216; padding: 2rem; border-radius: 24px; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 20px 40px rgba(0,0,0,0.6);">
+      <h3 style="color: #fff; margin-bottom: 0.5rem;">Обрезка аватарки</h3>
+      <p style="opacity: 0.7; font-size: 0.9rem; margin-bottom: 1rem;">Перетаскивайте область мышкой</p>
+      <div class="crop-container" style="position:relative; overflow:hidden; width:100%; height:250px; background:#111; border-radius:12px; margin: 1rem 0;">
+        <canvas id="cropCanvas" style="position:absolute; top:0; left:0; cursor:move;"></canvas>
+        <div class="crop-overlay" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:150px; height:150px; border-radius:50%; box-shadow: 0 0 0 9999px rgba(0,0,0,0.6); border:2px solid #00ffcc; pointer-events:none;"></div>
+      </div>
+      <div style="display:flex; gap:10px; justify-content:center;">
+        <button id="cancelCropBtn" class="btn-subtle" style="padding: 0.6rem 1.2rem; border-radius: 8px; background: rgba(255,255,255,0.05); color: #fff; border: none; cursor: pointer;">Отмена</button>
+        <button id="saveCropBtn" class="btn-glow" style="padding: 0.6rem 1.2rem; border-radius: 8px; cursor: pointer; background: #00ffcc; color: #000; border: none; font-weight: 600;">Применить</button>
+      </div>
+    </div>
+  </div>
+
 </body>
-</html>>
+</html>
