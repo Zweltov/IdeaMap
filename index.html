@@ -1,561 +1,254 @@
-/* ==========================================================================
-   1. БАЗОВЫЕ СТИЛИ И ПЕРЕМЕННЫЕ
-   ========================================================================== */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IdeaHub — каталог бизнес-идей</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,600;14..32,700&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="profile.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
 
-:root {
-  --bg-color: #0b0d10;
-  --text-color: #f0f2f5;
-  --accent-color: #00ffcc;
-  --card-bg: rgba(255, 255, 255, 0.03);
-  --card-border: rgba(255, 255, 255, 0.05);
-  --nav-bg: rgba(255, 255, 255, 0.03);
-  --nav-border: rgba(255, 255, 255, 0.08);
-  --nav-text: rgba(255, 255, 255, 0.6);
-  --nav-indicator-bg: rgba(255, 255, 255, 0.08);
-}
+  <div class="gradient-orb orb1"></div>
+  <div class="gradient-orb orb2"></div>
+  <div class="gradient-orb orb3"></div>
 
-body {
-  font-family: 'Inter', sans-serif;
-  background: var(--bg-color);
-  color: var(--text-color);
-  overflow-x: hidden;
-}
+  <header class="navbar">
+    <div class="navbar-container">
+      <div class="navbar-left">
+        <a href="#" class="logo-text">Idea<span>Hub</span></a>
+      </div>
+      
+      <nav class="navbar-glass" id="mainNav">
+        <div class="navbar-glass-container">
+          <div class="navbar-tabs" id="navTabs">
+            <div class="nav-indicator" id="navIndicator"></div>
+            <button class="nav-tab active" data-tab="match">
+              <i data-lucide="sliders"></i><span>Подборка</span>
+            </button>
+            <button class="nav-tab" data-tab="ideas">
+              <i data-lucide="lightbulb"></i><span>Идеи</span>
+            </button>
+            <button class="nav-tab" data-tab="articles">
+              <i data-lucide="book-open"></i><span>Статьи</span>
+            </button>
+          </div>
+        </div>
+      </nav>
 
-/* ==========================================================================
-   2. ДЕКОРАТИВНЫЕ СВЕТЯЩИЕСЯ ОРБЫ (ФОН)
-   ========================================================================== */
-.gradient-orb {
-  position: absolute;
-  width: 500px;
-  height: 500px;
-  border-radius: 50%;
-  filter: blur(150px);
-  z-index: -1;
-  opacity: 0.25;
-  pointer-events: none;
-}
-.orb1 { top: -150px; left: -100px; background: #8b5cf6; }
-.orb2 { top: 20%; right: -150px; background: #00ffcc; }
-.orb3 { bottom: -100px; left: 10%; background: #ec4899; }
+      <div class="navbar-right">
+        <div class="navbar-glass-auth">
+          <div class="auth-container">
+            <button class="btn-glow btn-auth-wide" id="authBtn">Войти / Регистрация</button>
+            
+            <div id="userProfileTrigger" class="profile-avatar-trigger" style="display: none;">
+              <img id="headerAvatar" src="https://api.dicebear.com/7.x/bottts/svg?seed=IdeaHub" alt="Avatar">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
 
-/* ==========================================================================
-   3. НАВБАР С ВЫВЕРЕННЫМ ГРАДИЕНТОМ И ДВОЙНОЙ КАПСУЛОЙ
-   ========================================================================== */
-.navbar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 90px;
-  z-index: 100;
-  display: flex;
-  align-items: center;
-  background: transparent;
-}
+  <main class="main-content">
+    
+    <section id="match-tab" class="tab-content active-tab">
+      <section class="hero-section">
+        <h1 class="hero-title">Умная <span>подборка</span> идей</h1>
+        <p class="hero-subtitle">Укажите ваш бюджет, свободное время и навыки, а наш алгоритм мгновенно подберет жизнеспособные бизнес-модели.</p>
+        
+        <div class="catalog-container" style="max-width: 650px; margin: 0 auto;">
+          <div class="glass-card" style="min-height: auto; padding: 2rem; text-align: center; opacity: 0.8;">
+            <i data-lucide="sparkles" style="width: 40px; height: 40px; color: var(--accent-color); margin-bottom: 1rem;"></i>
+            <h3 style="margin-bottom: 0.5rem; font-size: 1.3rem;">Конструктор умного поиска</h3>
+            <p style="font-size: 0.95rem; opacity: 0.7; margin-bottom: 1.5rem;">Интерфейс калькулятора бюджета, времени и сложности стартапа.</p>
+            <div class="filter-pills" style="justify-content: center;">
+              <button class="filter-pill">До 50 000 ₽</button>
+              <button class="filter-pill">До 200 000 ₽</button>
+              <button class="filter-pill">1-2 часа в день</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </section>
+    
+    <section id="ideas-tab" class="tab-content" style="display: none;">
+      <section class="hero-section">
+        <h1 class="hero-title">Найди свою идеальную <br><span>бизнес-идею</span></h1>
+        <p class="hero-subtitle">Интеллектуальный каталог перспективных стартапов, трендов и готовых решений для вашего старта.</p>
+        
+        <div class="search-filter-container glass">
+          <div class="search-box">
+            <i data-lucide="search" class="search-icon"></i>
+            <input type="text" id="ideasSearch" placeholder="Поиск бизнес-идеи, категории..." />
+            <button class="clear-btn" id="searchClear"><i data-lucide="x"></i></button>
+          </div>
+          <button class="btn-filter" id="filterToggleBtn">
+            <i data-lucide="sliders-horizontal"></i> Фильтры
+          </button>
+        </div>
 
-/* Градиент во всю ширину экрана с фокусом темноты у самого верха */
-.navbar::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 78px; 
-  background: linear-gradient(
-    to bottom,
-    rgba(5, 6, 8, 0.95) 0%,   
-    rgba(7, 9, 12, 0.75) 25%,  
-    rgba(9, 11, 14, 0.3) 65%,  
-    rgba(11, 13, 16, 0) 100%   
-  );
-  z-index: -1;
-  pointer-events: none;
-}
+        <div class="filter-panel glass" id="filterPanel" style="display: none; height: 0; opacity: 0;">
+          <div class="filter-group">
+            <h4>Категории</h4>
+            <div class="filter-pills" id="categoryFilters">
+              <button class="filter-pill active" data-category="all">Все</button>
+              <button class="filter-pill" data-category="IT">IT</button>
+              <button class="filter-pill" data-category="Еда">Еда</button>
+              <button class="filter-pill" data-category="Услуги">Услуги</button>
+              <button class="filter-pill" data-category="Онлайн-бизнес">Онлайн-бизнес</button>
+            </div>
+          </div>
+        </div>
+      </section>
 
-.navbar-container {
-  width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 2rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  position: relative;
-  z-index: 2;
-}
+      <div class="catalog-container">
+        <div class="cards-grid" id="cardsGrid">
+          </div>
+      </div>
+    </section>
 
-/* Жестко балансируем левую и правую части, чтобы центр был идеальным */
-.navbar-left {
-  flex: 1;
-  display: flex;
-  justify-content: flex-start;
-}
+    <section id="articles-tab" class="tab-content" style="display: none;">
+      <section class="hero-section">
+        <h1 class="hero-title">Полезные <span>Статьи</span></h1>
+        <p class="hero-subtitle">Гайды, аналитика рынка и советы экспертов по запуску и масштабированию бизнеса.</p>
+      </section>
+      <div class="catalog-container">
+        <div class="cards-grid" id="articlesGrid">
+          </div>
+      </div>
+    </section>
 
-.navbar-glass {
-  flex: 0 0 auto;
-  background: var(--nav-bg) !important;
-  border: 1px solid var(--nav-border) !important;
-  border-radius: 100px;
-  padding: 5px;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-}
+  </main>
 
-.navbar-right {
-  flex: 1;
-  display: flex;
-  justify-content: flex-end;
-}
+  <div id="profileDropdown" class="profile-dropdown">
+    <div class="profile-dropdown-scrollable">
+      <div class="profile-dropdown-header">
+        <div class="avatar-wrapper">
+          <img id="dropdownAvatar" src="https://api.dicebear.com/7.x/bottts/svg?seed=IdeaHub" alt="Avatar">
+          <label for="avatarInput" class="avatar-edit-btn" title="Изменить фото">
+            <i data-lucide="camera"></i>
+          </label>
+          <input type="file" id="avatarInput" accept="image/*" style="display: none;">
+        </div>
+        <h3 id="profileName">Имя Пользователя</h3>
+        <p id="profileEmail">user@example.com</p>
+      </div>
 
-/* Левая часть: Крупный выразительный логотип */
-.logo-text {
-  font-size: 1.8rem;
-  font-weight: 700;
-  color: var(--text-color);
-  text-decoration: none;
-  letter-spacing: -0.5px;
-}
-.logo-text span {
-  color: #00ffcc;
-}
+      <div class="profile-stats-grid">
+        <div class="stat-card">
+          <i data-lucide="message-square"></i>
+          <span class="stat-value" id="statComments">0</span>
+          <span class="stat-label">Отзывов</span>
+        </div>
+        <div class="stat-card">
+          <i data-lucide="arrow-up-circle"></i>
+          <span class="stat-value" id="statLikes">0</span>
+          <span class="stat-label">Рейтинг +</span>
+        </div>
+        <div class="stat-card">
+          <i data-lucide="book-open"></i>
+          <span class="stat-value" id="statArticles">0</span>
+          <span class="stat-label">Статей</span>
+        </div>
+        <div class="stat-card">
+          <i data-lucide="eye"></i>
+          <span class="stat-value" id="statViews">0</span>
+          <span class="stat-label">Идей</span>
+        </div>
+      </div>
 
-.navbar-glass-container {
-  display: flex;
-  align-items: center;
-}
+      <div class="profile-info-box">
+        <div class="info-item">
+          <span class="info-label">Возраст аккаунта:</span>
+          <span class="info-value" id="accountAge">0 дней</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Статус:</span>
+          <span class="info-value">Инвестор IdeaHub</span>
+        </div>
+      </div>
 
-.navbar-tabs {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
+      <div id="multiAccountsSection" class="multi-accounts-section">
+        <h4>Быстрое переключение</h4>
+        <div id="accountsList" class="accounts-list">
+          </div>
+        <button id="addAccountBtn" class="btn-subtle"><i data-lucide="plus"></i> Добавить аккаунт</button>
+      </div>
 
-/* Скользящая неоновая капля под активной вкладкой */
-.nav-indicator {
-  position: absolute;
-  height: calc(100% - 2px);
-  width: 0; 
-  background: rgba(255, 255, 255, 0.12) !important; 
-  border: 1px solid rgba(255, 255, 255, 0.15); 
-  border-radius: 100px;
-  top: 1px;
-  left: 0;
-  z-index: 1;
-  pointer-events: none;
-  will-change: transform, width;
-  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), width 0.35s ease;
-}
+      <div class="profile-footer-scroll">
+        <button id="multiAccToggleBtn" class="btn-icon" title="Управление аккаунтами">
+          <i data-lucide="more-horizontal"></i>
+        </button>
+        <button id="logoutBtn" class="btn-danger"><i data-lucide="log-out"></i> Выйти</button>
+      </div>
+    </div>
 
-/* Вкладки навигации — Крупный текст */
-.nav-tab {
-  background: transparent !important;
-  border: none !important;
-  padding: 0.7rem 1.6rem;
-  border-radius: 100px;
-  color: var(--nav-text) !important;
-  font-size: 1.05rem;
-  font-weight: 600;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  z-index: 2;
-  position: relative;
-  transition: color 0.3s ease;
-}
+    <div class="profile-fixed-settings">
+      <button id="settingsBtn" class="btn-settings">
+        <i data-lucide="settings"></i> Настройки профиля
+      </button>
+    </div>
+  </div>
 
-.nav-tab i {
-  width: 20px;
-  height: 20px;
-}
+  <div id="detailsModal" class="modal-overlay">
+    <div class="modal-backdrop" id="detailsBackdrop"></div>
+    <div class="modal-window glass">
+      <button class="modal-close" id="detailsCloseBtn">&times;</button>
+      <div id="modalDynamicContent"></div>
+    </div>
+  </div>
 
-.nav-tab:hover {
-  color: var(--text-color) !important;
-}
+  <script src="script.js" defer></script>
+  
+  <div id="authModal" class="modal" style="display: none;">
+    <div class="modal-content glass">
+      <span class="close-modal" id="closeAuth">&times;</span>
+      <h2 id="modalTitle">Вход в систему</h2>
+      <p id="modalSub" style="color: var(--nav-text); margin-bottom: 1.5rem;">Введите данные для доступа к IdeaHub</p>
+      
+      <form id="authForm">
+        <div class="input-group">
+          <label>Email</label>
+          <input type="email" id="authEmail" required placeholder="example@mail.com">
+        </div>
+        <div class="input-group">
+          <label>Пароль</label>
+          <input type="password" id="authPassword" required placeholder="••••••••">
+        </div>
+        <div class="input-group" id="nameFieldGroup" style="display: none;">
+          <label>Ваше имя (для регистрации)</label>
+          <input type="text" id="authName" placeholder="Иван Иванов">
+        </div>
+        <button type="submit" class="btn-glow btn-submit" id="submitAuthBtn">Войти</button>
+      </form>
+      
+      <p style="margin-top: 1.5rem; font-size: 0.9rem; color: var(--nav-text);">
+        <span id="toggleAuthText">Ещё нет аккаунта?</span> 
+        <a href="#" id="toggleAuthLink" style="color: var(--accent-color); text-decoration: none; margin-left: 5px;">Создать</a>
+      </p>
+    </div>
+  </div>
 
-.nav-tab.active {
-  color: var(--accent-color) !important;
-}
+  <div id="cropModal" class="auth-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 2000; align-items: center; justify-content: center;">
+    <div class="glass-card modal-content" style="max-width: 400px; width: 90%; text-align: center; background: #0f1216; padding: 2rem; border-radius: 24px; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 20px 40px rgba(0,0,0,0.6);">
+      <h3 style="color: #fff; margin-bottom: 0.5rem;">Обрезка аватарки</h3>
+      <p style="opacity: 0.7; font-size: 0.9rem; margin-bottom: 1rem;">Перетаскивайте область мышкой</p>
+      <div class="crop-container" style="position:relative; overflow:hidden; width:100%; height:250px; background:#111; border-radius:12px; margin: 1rem 0;">
+        <canvas id="cropCanvas" style="position:absolute; top:0; left:0; cursor:move;"></canvas>
+        <div class="crop-overlay" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:150px; height:150px; border-radius:50%; box-shadow: 0 0 0 9999px rgba(0,0,0,0.6); border:2px solid #00ffcc; pointer-events:none;"></div>
+      </div>
+      <div style="display:flex; gap:10px; justify-content:center;">
+        <button id="cancelCropBtn" class="btn-subtle" style="padding: 0.6rem 1.2rem; border-radius: 8px; background: rgba(255,255,255,0.05); color: #fff; border: none; cursor: pointer;">Отмена</button>
+        <button id="saveCropBtn" class="btn-glow" style="padding: 0.6rem 1.2rem; border-radius: 8px; cursor: pointer; background: #00ffcc; color: #000; border: none; font-weight: 600;">Применить</button>
+      </div>
+    </div>
+  </div>
 
-/* Правая часть: Капсула для кнопки "Войти" и контейнера профиля */
-.navbar-glass-auth {
-  background: var(--nav-bg);
-  border: 1px solid var(--nav-border);
-  border-radius: 100px;
-  padding: 5px;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Стилизация контейнера авторизации и круглой аватарки в набаре */
-.auth-container {
-  display: flex;
-  align-items: center;
-}
-
-.profile-avatar-trigger {
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  overflow: hidden;
-  cursor: pointer;
-  border: 2px solid var(--nav-border);
-  transition: transform 0.2s ease, border-color 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.profile-avatar-trigger:hover {
-  transform: scale(1.05);
-  border-color: var(--accent-color);
-  box-shadow: 0 0 15px rgba(0, 255, 204, 0.2);
-}
-
-.profile-avatar-trigger img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.btn-glow {
-  background: var(--text-color);
-  color: #0b0d10;
-  border: none;
-  padding: 0.7rem 1.8rem;
-  border-radius: 100px;
-  font-size: 1.05rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-.btn-glow:hover {
-  transform: scale(1.02);
-  box-shadow: 0 0 20px rgba(0, 255, 204, 0.3);
-}
-
-/* ==========================================================================
-   4. КОНТЕНТНАЯ ОБЛАСТЬ И СЕТКА КАРТОЧЕК
-   ========================================================================== */
-.main-content {
-  padding-top: 100px;
-  min-height: calc(100vh - 100px);
-  position: relative;
-}
-
-.tab-content {
-  width: 100%;
-}
-
-.hero-section {
-  max-width: 800px;
-  margin: 3rem auto 2rem auto;
-  text-align: center;
-  padding: 0 1.5rem;
-}
-
-.hero-title {
-  font-size: 3rem;
-  font-weight: 700;
-  line-height: 1.2;
-  letter-spacing: -1px;
-  margin-bottom: 1rem;
-}
-.hero-title span {
-  color: var(--accent-color);
-}
-
-.hero-subtitle {
-  font-size: 1.15rem;
-  opacity: 0.7;
-  max-width: 630px;
-  margin: 0 auto 2.5rem auto;
-  line-height: 1.6;
-}
-
-.search-filter-container {
-  display: flex;
-  gap: 1rem;
-  max-width: 650px;
-  margin: 0 auto;
-  padding: 6px;
-  border-radius: 100px;
-}
-.search-filter-container.glass {
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid var(--card-border);
-}
-
-.search-box {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  padding-left: 1.5rem;
-}
-.search-box input {
-  width: 100%;
-  background: transparent;
-  border: none;
-  outline: none;
-  color: var(--text-color);
-  font-size: 1rem;
-}
-
-.clear-btn {
-  background: transparent;
-  border: none;
-  color: var(--text-color);
-  cursor: pointer;
-  display: none;
-  align-items: center;
-  padding: 0 1rem;
-  opacity: 0.5;
-}
-
-.btn-filter {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--card-border);
-  color: var(--text-color);
-  padding: 0.6rem 1.5rem;
-  border-radius: 100px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 500;
-}
-
-.filter-panel {
-  max-width: 650px;
-  margin: 1rem auto 0 auto;
-  border-radius: 1.5rem;
-  padding: 1.2rem;
-  overflow: hidden;
-  transition: height 0.3s ease, opacity 0.3s ease;
-}
-.filter-pills {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.filter-pill {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--card-border);
-  color: var(--text-color);
-  padding: 0.4rem 1rem;
-  border-radius: 100px;
-  cursor: pointer;
-  font-size: 0.9rem;
-}
-.filter-pill:hover, .filter-pill.active {
-  background: var(--text-color);
-  color: #0b0d10;
-}
-
-/* Сетка каталога */
-.catalog-container {
-  max-width: 1200px;
-  margin: 3rem auto;
-  padding: 0 1.5rem;
-}
-.cards-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 1.5rem;
-}
-
-/* Стеклянные карточки */
-.glass-card {
-  background: var(--card-bg);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--card-border);
-  border-radius: 1.5rem;
-  padding: 1.8rem;
-  position: relative;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  min-height: 230px;
-  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.3s;
-}
-.glass-card:hover {
-  transform: translateY(-6px);
-  border-color: rgba(255, 255, 255, 0.15);
-}
-
-.card-badge {
-  align-self: flex-start;
-  background: rgba(255,255,255,0.05);
-  padding: 0.3rem 0.8rem;
-  border-radius: 100px;
-  font-size: 0.8rem;
-  margin-bottom: 1rem;
-  border: 1px solid var(--card-border);
-}
-
-.card-favorite {
-  position: absolute;
-  top: 1.5rem;
-  right: 1.5rem;
-  background: rgba(255,255,255,0.03);
-  border: 1px solid var(--card-border);
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-color);
-  cursor: pointer;
-}
-.card-favorite.active, .card-favorite:hover {
-  background: var(--text-color);
-  color: #0b0d10;
-}
-
-.card-title {
-  font-size: 1.3rem;
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-}
-.card-desc {
-  font-size: 0.95rem;
-  opacity: 0.7;
-  line-height: 1.5;
-  margin-bottom: 1.5rem;
-  flex-grow: 1;
-}
-.card-meta {
-  display: flex;
-  gap: 1rem;
-  border-top: 1px solid var(--card-border);
-  padding-top: 1rem;
-}
-.meta-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.85rem;
-}
-
-/* ==========================================================================
-   5. МОДАЛЬНЫЕ ОКНА
-   ========================================================================== */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.3s ease;
-}
-.modal-overlay.active {
-  opacity: 1;
-  pointer-events: auto;
-}
-.modal-backdrop {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(11, 13, 16, 0.7);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-}
-.modal-window {
-  position: relative;
-  width: 90%;
-  max-width: 700px;
-  max-height: 85vh;
-  overflow-y: auto;
-  border-radius: 2rem;
-  padding: 2.5rem;
-  z-index: 1001;
-  transform: translateY(30px);
-  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-.modal-window.glass {
-  background: rgba(20, 24, 30, 0.75);
-  border: 1px solid rgba(255,255,255,0.08);
-}
-.modal-overlay.active .modal-window {
-  transform: translateY(0);
-}
-.small-modal .modal-window {
-  max-width: 400px;
-}
-.modal-close {
-  position: absolute;
-  top: 1.5rem;
-  right: 1.5rem;
-  background: none;
-  border: none;
-  color: var(--text-color);
-  font-size: 2rem;
-  cursor: pointer;
-  opacity: 0.5;
-}
-.modal-badge {
-  display: inline-block;
-  padding: 0.4rem 1rem;
-  background: rgba(255,255,255,0.06);
-  border-radius: 100px;
-  font-size: 0.85rem;
-  margin-bottom: 1rem;
-}
-.modal-grid-info {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1rem;
-  margin: 1.5rem 0;
-  background: rgba(255,255,255,0.02);
-  padding: 1.2rem;
-  border-radius: 1.2rem;
-  border: 1px solid var(--card-border);
-}
-.modal-blocks h3 {
-  margin-top: 1.5rem;
-  font-size: 1.15rem;
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  color: var(--accent-color);
-}
-.modal-blocks p {
-  opacity: 0.8;
-  margin-top: 0.4rem;
-  line-height: 1.5;
-}
-
-/* Авторизация */
-.auth-title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  margin-bottom: 1.5rem;
-  text-align: center;
-}
-.auth-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-.
+</body>
+</html>
