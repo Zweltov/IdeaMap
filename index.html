@@ -10,6 +10,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="profile.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -19,7 +20,6 @@
 
   <header class="navbar">
     <div class="navbar-container">
-      
       <div class="navbar-left">
         <a href="#" class="logo-text">Idea<span>Hub</span></a>
       </div>
@@ -43,7 +43,7 @@
 
       <div class="navbar-right">
         <div class="navbar-glass-auth">
-          <button class="btn-glow" id="loginBtn">Войти</button>
+          <button class="btn-glow btn-auth-wide" id="authBtn">Войти / Регистрация</button>
         </div>
       </div>
     </div>
@@ -128,19 +128,36 @@
     </div>
   </div>
 
-  <div id="loginModal" class="modal-overlay small-modal">
-    <div class="modal-backdrop" id="loginBackdrop"></div>
-    <div class="modal-window glass auth-window">
-      <button class="modal-close" id="loginCloseBtn">&times;</button>
-      <h3 class="auth-title">Вход</h3>
-      <form id="loginForm" class="auth-form">
-        <input type="email" placeholder="Email" required />
-        <input type="password" placeholder="Пароль" required />
-        <button type="submit" class="btn-glow">Войти</button>
+  <script src="script.js" defer></script>
+  
+    <div id="authModal" class="modal" style="display: none;">
+    <div class="modal-content glass">
+      <span class="close-modal" id="closeAuth">&times;</span>
+      <h2 id="modalTitle">Вход в систему</h2>
+      <p id="modalSub" style="color: var(--nav-text); margin-bottom: 1.5rem;">Введите данные для доступа к IdeaHub</p>
+      
+      <form id="authForm">
+        <div class="input-group">
+          <label>Email</label>
+          <input type="email" id="authEmail" required placeholder="example@mail.com">
+        </div>
+        <div class="input-group">
+          <label>Пароль</label>
+          <input type="password" id="authPassword" required placeholder="••••••••">
+        </div>
+        <div class="input-group" id="nameFieldGroup" style="display: none;">
+          <label>Ваше имя (для регистрации)</label>
+          <input type="text" id="authName" placeholder="Иван Иванов">
+        </div>
+        <button type="submit" class="btn-glow btn-submit" id="submitAuthBtn">Войти</button>
       </form>
+      
+      <p style="margin-top: 1.5rem; font-size: 0.9rem; color: var(--nav-text);">
+        <span id="toggleAuthText">Ещё нет аккаунта?</span> 
+        <a href="#" id="toggleAuthLink" style="color: var(--accent-color); text-decoration: none; margin-left: 5px;">Создать</a>
+      </p>
     </div>
   </div>
 
-  <script src="script.js"></script>
 </body>
-</html>
+</html>>

@@ -1,296 +1,627 @@
-// ===== ДАННЫЕ ИДEЙ =====
+// ===== КОНФИГУРАЦИЯ SUPABASE =====
+const SUPABASE_URL = 'https://hhwndrynnozllrqtcdct.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhod25kcnlubm96bGxycXRjZGN0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM5MTkyOTIsImV4cCI6MjA5OTQ5NTI5Mn0.Gq2PNYIiZzKIaUNOY1AfF-8yVnAjPCf2HRGMX11Av14';
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ===== ДАННЫЕ ИДЕЙ =====
 const ideas = [
   { id: 1, name: "AI-помощник для бизнеса", category: "IT", capital: 25000, complexity: "Средняя", potential: "Высокий", rating: 4.8, desc: "Чат-боты и аналитика для малого бизнеса.", why: "Автоматизация продаж.", pros: "Быстрая окупаемость.", cons: "Конкуренция.", how: "Соберите MVP за 3 мес.", risks: "Технические сбои." },
   { id: 2, name: "Доставка здоровой еды", category: "Еда", capital: 18000, complexity: "Средняя", potential: "Средний", rating: 4.2, desc: "Готовые рационы для офисов.", why: "Рост ЗОЖ.", pros: "Постоянные клиенты.", cons: "Логистика.", how: "Начните с кухни.", risks: "Срок годности." },
   { id: 3, name: "Клининг 2.0", category: "Услуги", capital: 8000, complexity: "Низкая", potential: "Высокий", rating: 4.5, desc: "Уборка с эко-средствами.", why: "Спрос на чистоту.", pros: "Низкий порог.", cons: "Много ручного труда.", how: "Закупите инвентарь.", risks: "Травмы." },
-  { id: 4, name: "Коворкинг для фрилансеров", category: "Недвижимость", capital: 85000, complexity: "Высокая", potential: "Средний", rating: 4.0, desc: "Тихое место с быстрым интернетом и кофе.", why: "Удаленная работа.", pros: "Пассивный доход.", cons: "Аренда.", how: "Найдите помещение.", risks: "Пустующие места." },
-  { id: 5, name: "Онлайн-школа кодинга", category: "IT", capital: 12000, complexity: "Средняя", potential: "Высокий", rating: 4.7, desc: "Курсы для детей от 10 лет.", why: "Популярность IT.", pros: "Без границ продажи.", cons: "Сложно удержать внимание.", how: "Запишите тестовый урок.", risks: "Смена трендов." },
-  { id: 6, name: "Эко-упаковка из грибов", category: "Производство", capital: 45000, complexity: "Высокая", potential: "Высокий", rating: 4.6, desc: "Биоразлагаемая замена пластику.", why: "Забота об экологии.", pros: "Уникальный продукт.", cons: "Долгое производство.", how: "Купите мицелий.", risks: "Сырьевой кризис." },
-  { id: 7, name: "Кофейня самообслуживания", category: "Еда", capital: 5000, complexity: "Низкая", potential: "Средний", rating: 4.3, desc: "Автоматы в бизнес-центрах.", why: "Любовь к кофе.", pros: "Без сотрудников.", cons: "Вандализм.", how: "Купите стойку кофе.", risks: "Плохая локация." },
-  { id: 8, name: "Агентство кибербезопасности", category: "IT", capital: 30000, complexity: "Высокая", potential: "Высокий", rating: 4.9, desc: "Аудит защиты сайтов и серверов.", why: "Частые хакерские атаки.", pros: "Высокий чек.", cons: "Нужны топ-профи.", how: "Проведите бесплатный аудит.", risks: "Пропуск уязвимости." },
-  { id: 9, name: "Дропшиппинг гаджетов", category: "Онлайн-бизнес", capital: 3000, complexity: "Низкая", potential: "Средний", rating: 4.1, desc: "Продажи трендовых товаров без склада.", why: "Легкий старт.", pros: "Минимум вложений.", cons: "Долгая доставка.", how: "Создайте одностраничник.", risks: "Брак товара." },
-  { id: 10, name: "Студия 3D-печати деталей", category: "Производство", capital: 15000, complexity: "Средняя", potential: "Средний", rating: 4.4, desc: "Печать редких автозапчастей и сувениров.", why: "Импортозамещение.", pros: "Широкая ниша.", cons: "Дорогой пластик.", how: "Купите 3D-принтер.", risks: "Поломка принтера." },
-  { id: 11, name: "Фитнес-приложение с AI", category: "IT", capital: 40000, complexity: "Высокая", potential: "Высокий", rating: 4.6, desc: "Генерация тренировок по камере телефона.", why: "Домашний фитнес.", pros: "Масштабируемость.", cons: "Дорогой маркетинг.", how: "Разработайте прототип.", risks: "Отказ от подписок." },
-  { id: 12, name: "Агентство по продвижению в соцсетях", category: "Онлайн-бизнес", capital: 5000, complexity: "Низкая", potential: "Высокий", rating: 4.4, desc: "SMM для локального малого бизнеса.", why: "Рост соцсетей.", pros: "Низкий старт.", cons: "Высокая конкуренция.", how: "Создайте портфолио для первого клиента.", risks: "Изменения алгоритмов умных лент." }
+  { id: 4, name: "Коворкинг для фрилансеров", category: "Недвижимость", capital: 120000, complexity: "Высокая", potential: "Средний", rating: 3.9, desc: "Пространство с переговорными.", why: "Рост удаленки.", pros: "Долгосрочная аренда.", cons: "Высокая аренда.", how: "Найдите помещение.", risks: "Низкая заполняемость." },
+  { id: 5, name: "Производство деревянных игрушек", category: "Производство", capital: 30000, complexity: "Средняя", potential: "Средний", rating: 4.0, desc: "Эко-игрушки ручной работы.", why: "Тренд на натуральное.", pros: "Уникальность.", cons: "Масштабирование.", how: "Мастерская + станки.", risks: "Сезонность." },
+  { id: 6, name: "Онлайн-школа английского", category: "Онлайн-бизнес", capital: 15000, complexity: "Низкая", potential: "Высокий", rating: 4.7, desc: "Интерактивные уроки с носителями.", why: "Образование онлайн.", pros: "Масштабируемость.", cons: "Конкуренция.", how: "Платформа Zoom.", risks: "Отток учеников." },
+  { id: 7, name: "Франшиза кофейни", category: "Еда", capital: 90000, complexity: "Высокая", potential: "Средний", rating: 3.8, desc: "Готовая бизнес-модель.", why: "Популярность кофе.", pros: "Поддержка.", cons: "Роялти.", how: "Купите франшизу.", risks: "Зависимость." },
+  { id: 8, name: "Сервис по ремонту гаджетов", category: "Услуги", capital: 12000, complexity: "Средняя", potential: "Высокий", rating: 4.3, desc: "Ремонт с выездом на дом.", why: "Дорогие устройства.", pros: "Низкий вход.", cons: "Навыки.", how: "Инструменты + реклама.", risks: "Повреждения." },
+  { id: 9, name: "Аренда эксклюзивных авто", category: "Услуги", capital: 150000, complexity: "Высокая", potential: "Средний", rating: 3.5, desc: "Прокат премиум-класса.", why: "Статус.", pros: "Высокая маржа.", cons: "Обслуживание.", how: "Парк из 3 авто.", risks: "ДТП." },
+  { id: 10, name: "Платформа для наставников", category: "IT", capital: 40000, complexity: "Средняя", potential: "Высокий", rating: 4.6, desc: "Связь менторов и учеников.", why: "Образование.", pros: "Комиссия.", cons: "Доверие.", how: "Сайт + модерация.", risks: "Мошенники." },
+  { id: 11, name: "Фудтрак с азиатской кухней", category: "Еда", capital: 22000, complexity: "Средняя", potential: "Средний", rating: 4.1, desc: "Уличная еда в стиле стрит-фуд.", why: "Мобильность.", pros: "Гибкость.", cons: "Погода.", how: "Купите фудтрак.", risks: "Разрешения." },
+  { id: 12, name: "Агентство по продвижению в соцсетях", category: "Онлайн-бизнес", capital: 5000, complexity: "Низкая", potential: "Высокий", rating: 4.4, desc: "SMM для малого бизнеса.", why: "Рост соцсетей.", pros: "Низкий старт.", cons: "Креатив.", how: "Портфолио.", risks: "Отток клиентов." },
+  { id: 13, name: "Умный дом под ключ", category: "IT", capital: 35000, complexity: "Средняя", potential: "Средний", rating: 3.7, desc: "Интеграция систем умного дома.", why: "Автоматизация.", pros: "Дорого.", cons: "Сложность монтажа.", how: "Обучение.", risks: "Совместимость." },
+  { id: 14, name: "Бистро здорового питания", category: "Еда", capital: 28000, complexity: "Средняя", potential: "Высокий", rating: 4.3, desc: "Блюда без глютена и сахара.", why: "Здоровье.", pros: "Целевая аудитория.", cons: "Цены.", how: "Аренда помещения.", risks: "Продукты." },
+  { id: 15, name: "Консалтинг для стартапов", category: "Услуги", capital: 2000, complexity: "Низкая", potential: "Средний", rating: 3.9, desc: "Помощь в запуске.", why: "Много стартапов.", pros: "Экспертность.", cons: "Репутация.", how: "Сайт.", risks: "Нестабильность." },
+  { id: 16, name: "Студия 3D-печати", category: "Производство", capital: 45000, complexity: "Средняя", potential: "Средний", rating: 4.0, desc: "Печать прототипов и сувениров.", why: "Технологии.", pros: "Индивидуальные заказы.", cons: "Материалы.", how: "Принтеры.", risks: "Поломка." },
+  { id: 17, name: "Психологическая онлайн-платформа", category: "Онлайн-бизнес", capital: 20000, complexity: "Средняя", potential: "Высокий", rating: 4.8, desc: "Сессии с психологами.", why: "Рост тревожности.", pros: "Масштаб.", cons: "Сложность подбора.", how: "CRM.", risks: "Этика." },
+  { id: 18, name: "Аренда спортивного инвентаря", category: "Услуги", capital: 10000, complexity: "Низкая", potential: "Средний", rating: 3.6, desc: "Велосипеды, лыжи, скейты.", why: "Активный отдых.", pros: "Сезонность.", cons: "Износ.", how: "Закупка.", risks: "Кражи." },
+  { id: 19, name: "Мини-пекарня", category: "Еда", capital: 32000, complexity: "Средняя", potential: "Средний", rating: 4.2, desc: "Выпечка на заказ.", why: "Домашний уют.", pros: "Высокая маржа.", cons: "Ранний подъем.", how: "Оборудование.", risks: "Рецепты." },
+  { id: 20, name: "Аренда коворкинга для творцов", category: "Недвижимость", capital: 80000, complexity: "Высокая", potential: "Средний", rating: 3.8, desc: "Студии для художников, музыкантов.", why: "Креативная экономика.", pros: "Сообщество.", cons: "Шум.", how: "Ремонт.", risks: "Низкий спрос." }
 ];
 
+// ===== СОСТОЯНИЕ =====
+let favorites = JSON.parse(localStorage.getItem('ideahub_favs')) || [];
+let likes = JSON.parse(localStorage.getItem('ideahub_likes')) || {};
+let currentCategory = 'all';
+let searchTerm = '';
+let currentUser = null;
+let currentIdeaComments = [];
+let isModalOpen = false;
+let currentCardElement = null;
+let isRegisterMode = false;
 let articles = [];
-let savedIdeas = JSON.parse(localStorage.getItem('savedIdeas')) || [];
 
-document.addEventListener('DOMContentLoaded', () => {
-  initSPA();
-  renderIdeas(ideas);
-  fetchArticles();
-  initModals();
-  initFilters();
-  updateSavedCount();
-  if (typeof lucide !== 'undefined') lucide.createIcons();
+// ===== УВЕДОМЛЕНИЯ =====
+function showNotification(message, type = 'success') {
+  const existing = document.querySelector('.notification');
+  if (existing) existing.remove();
+
+  const notif = document.createElement('div');
+  notif.className = `notification ${type}`;
+  notif.textContent = message;
+  document.body.appendChild(notif);
+
+  setTimeout(() => notif.classList.add('show'), 10);
+  setTimeout(() => {
+    notif.classList.remove('show');
+    setTimeout(() => notif.remove(), 400);
+  }, 3000);
+}
+
+// =======================================================================
+// ВКЛАДКИ ВЕРХНЕЙ ПАНЕЛИ + СКОЛЬЗЯЩИЙ ИНДИКАТОР
+// =======================================================================
+const navTabs = document.querySelectorAll('.nav-tab');
+const navIndicator = document.getElementById('navIndicator');
+const tabContents = document.querySelectorAll('.tab-content');
+
+function moveIndicator(tabEl) {
+  if (!tabEl || !navIndicator) return;
+  navIndicator.style.width = `${tabEl.offsetWidth}px`;
+  navIndicator.style.transform = `translateX(${tabEl.offsetLeft}px)`;
+}
+
+function switchTab(tabName) {
+  navTabs.forEach(t => t.classList.toggle('active', t.dataset.tab === tabName));
+  tabContents.forEach(c => {
+    c.style.display = c.id === `${tabName}-tab` ? '' : 'none';
+  });
+  const activeTab = Array.from(navTabs).find(t => t.dataset.tab === tabName);
+  moveIndicator(activeTab);
+
+  if (tabName === 'articles') renderArticles();
+  if (tabName === 'ideas') renderCards();
+}
+
+navTabs.forEach(tab => {
+  tab.addEventListener('click', () => switchTab(tab.dataset.tab));
 });
 
-// ===== ЛОГИКА БЕСШОВНОГО SPA (УБРАНЫ РЕДИРЕКТЫ) =====
-function initSPA() {
-  const tabs = document.querySelectorAll('.nav-tab');
-  const indicator = document.getElementById('navIndicator');
+window.addEventListener('resize', () => {
+  const active = document.querySelector('.nav-tab.active');
+  if (active) moveIndicator(active);
+});
 
-  function updateIndicator(activeTabEl) {
-    if (!activeTabEl) return;
-    const rect = activeTabEl.getBoundingClientRect();
-    const parentRect = activeTabEl.parentElement.getBoundingClientRect();
-    const left = rect.left - parentRect.left;
-    
-    gsap.to(indicator, {
-      x: left,
-      width: rect.width,
-      duration: 0.4,
-      ease: "power3.out"
-    });
-  }
+// =======================================================================
+// АВТОРИЗАЦИЯ (модальное окно #authModal)
+// =======================================================================
+const authModal = document.getElementById('authModal');
+const authBtn = document.getElementById('authBtn');
+const closeAuthBtn = document.getElementById('closeAuth');
+const authForm = document.getElementById('authForm');
+const modalTitle = document.getElementById('modalTitle');
+const modalSub = document.getElementById('modalSub');
+const nameFieldGroup = document.getElementById('nameFieldGroup');
+const authNameInput = document.getElementById('authName');
+const authEmailInput = document.getElementById('authEmail');
+const authPasswordInput = document.getElementById('authPassword');
+const submitAuthBtn = document.getElementById('submitAuthBtn');
+const toggleAuthText = document.getElementById('toggleAuthText');
+const toggleAuthLink = document.getElementById('toggleAuthLink');
 
-  // Первичная посадка индикатора
-  setTimeout(() => {
-    const currentActive = document.querySelector('.nav-tab.active');
-    updateIndicator(currentActive);
-  }, 100);
-
-  tabs.forEach(tab => {
-    tab.addEventListener('click', (e) => {
-      const clickedTab = e.currentTarget;
-      tabs.forEach(t => t.classList.remove('active'));
-      clickedTab.classList.add('active');
-      updateIndicator(clickedTab);
-
-      const targetTabId = clickedTab.getAttribute('data-tab');
-      switchTab(targetTabId);
-    });
-  });
-
-  window.addEventListener('resize', () => {
-    updateIndicator(document.querySelector('.nav-tab.active'));
-  });
+function openAuthModal() {
+  authModal.style.display = 'flex';
+}
+function closeAuthModal() {
+  authModal.style.display = 'none';
+  authForm?.reset();
 }
 
-function switchTab(tabId) {
-  const allTabsContent = document.querySelectorAll('.tab-content');
-  const targetContent = document.getElementById(`${tabId}-tab`);
+function setAuthMode(registerMode) {
+  isRegisterMode = registerMode;
+  if (registerMode) {
+    modalTitle.textContent = 'Регистрация';
+    modalSub.textContent = 'Создайте аккаунт, чтобы сохранять идеи и оставлять комментарии';
+    nameFieldGroup.style.display = 'block';
+    submitAuthBtn.textContent = 'Создать аккаунт';
+    toggleAuthText.textContent = 'Уже есть аккаунт?';
+    toggleAuthLink.textContent = 'Войти';
+  } else {
+    modalTitle.textContent = 'Вход в систему';
+    modalSub.textContent = 'Введите данные для доступа к IdeaHub';
+    nameFieldGroup.style.display = 'none';
+    submitAuthBtn.textContent = 'Войти';
+    toggleAuthText.textContent = 'Ещё нет аккаунта?';
+    toggleAuthLink.textContent = 'Создать';
+  }
+}
 
-  allTabsContent.forEach(content => {
-    if (content.classList.contains('active-tab')) {
-      gsap.to(content, {
-        opacity: 0, y: 15, duration: 0.2, onComplete: () => {
-          content.style.display = 'none';
-          content.classList.remove('active-tab');
-          
-          // Включаем целевой таб
-          targetContent.style.display = 'block';
-          gsap.fromTo(targetContent, { opacity: 0, y: -15 }, { opacity: 1, y: 0, duration: 0.3 });
-          targetContent.classList.add('active-tab');
-        }
-      });
+function updateAuthButton() {
+  if (!authBtn) return;
+  if (currentUser) {
+    const name = currentUser.user_metadata?.name || currentUser.email?.split('@')[0] || 'Профиль';
+    authBtn.textContent = `👋 ${name} · Выйти`;
+  } else {
+    authBtn.textContent = 'Войти / Регистрация';
+  }
+}
+
+authBtn?.addEventListener('click', () => {
+  if (currentUser) {
+    signOut();
+  } else {
+    setAuthMode(false);
+    openAuthModal();
+  }
+});
+closeAuthBtn?.addEventListener('click', closeAuthModal);
+authModal?.addEventListener('click', (e) => {
+  if (e.target === authModal) closeAuthModal();
+});
+toggleAuthLink?.addEventListener('click', (e) => {
+  e.preventDefault();
+  setAuthMode(!isRegisterMode);
+});
+
+authForm?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email = authEmailInput.value;
+  const password = authPasswordInput.value;
+
+  if (isRegisterMode) {
+    const name = authNameInput.value;
+    const result = await signUp(email, password, name);
+    if (result) closeAuthModal();
+  } else {
+    const result = await signIn(email, password);
+    if (result) closeAuthModal();
+  }
+});
+
+async function signUp(email, password, name) {
+  try {
+    const { data, error } = await supabaseClient.auth.signUp({
+      email,
+      password,
+      options: { data: { name } }
+    });
+    if (error) throw error;
+    showNotification('Аккаунт создан! Проверьте почту для подтверждения.');
+    return data;
+  } catch (error) {
+    showNotification(error.message, 'error');
+    return null;
+  }
+}
+
+async function signIn(email, password) {
+  try {
+    const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    showNotification('Добро пожаловать!');
+    await updateUserUI();
+    renderCards();
+    return data;
+  } catch (error) {
+    showNotification(error.message, 'error');
+    return null;
+  }
+}
+
+async function signOut() {
+  try {
+    const { error } = await supabaseClient.auth.signOut();
+    if (error) throw error;
+    currentUser = null;
+    await updateUserUI();
+    renderCards();
+    showNotification('Вы вышли из аккаунта');
+  } catch (error) {
+    showNotification(error.message, 'error');
+  }
+}
+
+async function updateUserUI() {
+  const { data: { user } } = await supabaseClient.auth.getUser();
+  currentUser = user;
+  updateAuthButton();
+}
+
+// =======================================================================
+// КОММЕНТАРИИ
+// =======================================================================
+async function loadComments(ideaId) {
+  try {
+    const { data, error } = await supabaseClient
+      .from('comments')
+      .select('*')
+      .eq('idea_id', ideaId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    currentIdeaComments = data || [];
+    return currentIdeaComments;
+  } catch (error) {
+    console.error('Ошибка загрузки комментариев:', error);
+    return [];
+  }
+}
+
+async function addComment(ideaId, text) {
+  if (!currentUser) {
+    showNotification('Войдите, чтобы оставить комментарий', 'error');
+    return null;
+  }
+  try {
+    const { data, error } = await supabaseClient
+      .from('comments')
+      .insert({
+        idea_id: ideaId,
+        user_id: currentUser.id,
+        user_name: currentUser.user_metadata?.name || currentUser.email?.split('@')[0] || 'Аноним',
+        text: text
+      })
+      .select();
+
+    if (error) throw error;
+    showNotification('Комментарий добавлен');
+    return data;
+  } catch (error) {
+    showNotification(error.message, 'error');
+    return null;
+  }
+}
+
+// =======================================================================
+// ЛАЙКИ И ИЗБРАННОЕ (Supabase)
+// =======================================================================
+async function toggleLikeSupabase(ideaId) {
+  if (!currentUser) {
+    showNotification('Войдите, чтобы оценить идею', 'error');
+    return false;
+  }
+  try {
+    const { data: existing } = await supabaseClient
+      .from('likes')
+      .select('*')
+      .eq('idea_id', ideaId)
+      .eq('user_id', currentUser.id)
+      .single();
+
+    if (existing) {
+      await supabaseClient.from('likes').delete().eq('idea_id', ideaId).eq('user_id', currentUser.id);
+      likes[ideaId] = (likes[ideaId] || 1) - 1;
+      if (likes[ideaId] <= 0) delete likes[ideaId];
+    } else {
+      await supabaseClient.from('likes').insert({ idea_id: ideaId, user_id: currentUser.id });
+      likes[ideaId] = (likes[ideaId] || 0) + 1;
     }
-  });
+
+    localStorage.setItem('ideahub_likes', JSON.stringify(likes));
+    renderCards();
+    return true;
+  } catch (error) {
+    console.error('Ошибка с лайком:', error);
+    showNotification('Ошибка при оценке', 'error');
+    return false;
+  }
 }
 
-// ===== РЕНДЕРИНГ БИЗНЕС-ИДEЙ =====
-function renderIdeas(data) {
-  const grid = document.getElementById('cardsGrid');
-  grid.innerHTML = '';
-
-  if(data.length === 0) {
-    grid.innerHTML = `<p class="no-results">Ничего не найдено</p>`;
-    return;
+async function toggleFavSupabase(ideaId) {
+  if (!currentUser) {
+    showNotification('Войдите, чтобы добавить в избранное', 'error');
+    return false;
   }
+  try {
+    const { data: existing } = await supabaseClient
+      .from('favorites')
+      .select('*')
+      .eq('idea_id', ideaId)
+      .eq('user_id', currentUser.id)
+      .single();
 
-  data.forEach(idea => {
-    const isSaved = savedIdeas.includes(idea.id);
-    const card = document.createElement('div');
-    card.className = 'glass-card card-animate';
-    card.innerHTML = `
-      <div class="card-badge">${idea.category}</div>
-      <button class="card-favorite ${isSaved ? 'active' : ''}" data-id="${idea.id}">
-        <i data-lucide="bookmark"></i>
+    if (existing) {
+      await supabaseClient.from('favorites').delete().eq('idea_id', ideaId).eq('user_id', currentUser.id);
+      favorites = favorites.filter(id => id !== ideaId);
+    } else {
+      await supabaseClient.from('favorites').insert({ idea_id: ideaId, user_id: currentUser.id });
+      if (!favorites.includes(ideaId)) favorites.push(ideaId);
+    }
+
+    localStorage.setItem('ideahub_favs', JSON.stringify(favorites));
+    renderCards();
+    return true;
+  } catch (error) {
+    console.error('Ошибка с избранным:', error);
+    showNotification('Ошибка при сохранении', 'error');
+    return false;
+  }
+}
+
+async function loadUserData() {
+  try {
+    if (!currentUser) return;
+    const { data: favData } = await supabaseClient
+      .from('favorites').select('idea_id').eq('user_id', currentUser.id);
+    if (favData) {
+      favorites = favData.map(f => f.idea_id);
+      localStorage.setItem('ideahub_favs', JSON.stringify(favorites));
+    }
+
+    const { data: likeData } = await supabaseClient
+      .from('likes').select('idea_id').eq('user_id', currentUser.id);
+    if (likeData) {
+      const newLikes = {};
+      likeData.forEach(l => { newLikes[l.idea_id] = (newLikes[l.idea_id] || 0) + 1; });
+      likes = { ...likes, ...newLikes };
+      localStorage.setItem('ideahub_likes', JSON.stringify(likes));
+    }
+  } catch (error) {
+    console.error('Ошибка загрузки данных:', error);
+  }
+}
+
+// =======================================================================
+// КАТАЛОГ ИДЕЙ: ПОИСК, ФИЛЬТРЫ, КАРТОЧКИ
+// =======================================================================
+const cardsGrid = document.getElementById('cardsGrid');
+const ideasSearchInput = document.getElementById('ideasSearch');
+const searchClearBtn = document.getElementById('searchClear');
+const filterToggleBtn = document.getElementById('filterToggleBtn');
+const filterPanel = document.getElementById('filterPanel');
+const categoryFilters = document.getElementById('categoryFilters');
+let filterPanelOpen = false;
+
+function renderIdeaCard(idea) {
+  const isFav = favorites.includes(idea.id);
+  const likeCount = likes[idea.id] || 0;
+  return `
+    <div class="glass-card" data-id="${idea.id}">
+      <span class="card-badge">${idea.category}</span>
+      <button class="card-favorite ${isFav ? 'active' : ''}" data-fav="${idea.id}" aria-label="В избранное">
+        <i data-lucide="heart"></i>
       </button>
       <h3 class="card-title">${idea.name}</h3>
       <p class="card-desc">${idea.desc}</p>
       <div class="card-meta">
-        <div class="meta-item"><i data-lucide="wallet"></i> <span>${idea.capital.toLocaleString()} ₽</span></div>
-        <div class="meta-item"><i data-lucide="bar-chart-2"></i> <span>${idea.complexity}</span></div>
+        <span class="meta-item"><i data-lucide="wallet"></i> от ${idea.capital.toLocaleString('ru-RU')} ₽</span>
+        <span class="meta-item"><i data-lucide="star"></i> ${idea.rating.toFixed(1)}</span>
+        <span class="meta-item"><i data-lucide="thumbs-up"></i> ${likeCount}</span>
       </div>
-    `;
+    </div>`;
+}
 
-    // Клик на карточку открывает модалку
-    card.addEventListener('click', (e) => {
-      if (e.target.closest('.card-favorite')) return; // Игнорируем клик по закладке
-      openDetailsModal('idea', idea);
-    });
-
-    // Обработка закладки
-    card.querySelector('.card-favorite').addEventListener('click', (e) => {
-      toggleSaveIdea(idea.id, e.currentTarget);
-    });
-
-    grid.appendChild(card);
+function renderCards() {
+  if (!cardsGrid) return;
+  const filtered = ideas.filter(idea => {
+    const matchesCategory = currentCategory === 'all' || idea.category === currentCategory;
+    const matchesSearch = idea.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      idea.category.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesCategory && matchesSearch;
   });
-  if (typeof lucide !== 'undefined') lucide.createIcons();
+
+  cardsGrid.innerHTML = filtered.length
+    ? filtered.map(renderIdeaCard).join('')
+    : '<p style="opacity:0.6;">Ничего не найдено</p>';
+
+  if (window.lucide) lucide.createIcons();
+
+  cardsGrid.querySelectorAll('.card-favorite').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleFavSupabase(parseInt(btn.dataset.fav, 10));
+    });
+  });
+  cardsGrid.querySelectorAll('.glass-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const idea = ideas.find(i => i.id === parseInt(card.dataset.id, 10));
+      if (idea) openIdeaModal(idea, card);
+    });
+  });
 }
 
-// ===== ПОЛУЧЕНИЕ И РЕНДЕРИНГ СТАТЕЙ ИЗ JSON =====
-async function fetchArticles() {
-  try {
-    const response = await fetch('articles.json');
-    articles = await response.json();
-    renderArticles(articles);
-  } catch (error) {
-    console.error("Ошибка загрузки статей:", error);
-    document.getElementById('articlesGrid').innerHTML = '<p>Не удалось загрузить статьи.</p>';
+ideasSearchInput?.addEventListener('input', (e) => {
+  searchTerm = e.target.value;
+  if (searchClearBtn) searchClearBtn.style.display = searchTerm ? 'flex' : 'none';
+  renderCards();
+});
+
+searchClearBtn?.addEventListener('click', () => {
+  searchTerm = '';
+  if (ideasSearchInput) ideasSearchInput.value = '';
+  searchClearBtn.style.display = 'none';
+  renderCards();
+});
+
+filterToggleBtn?.addEventListener('click', () => {
+  filterPanelOpen = !filterPanelOpen;
+  if (!filterPanel) return;
+  if (filterPanelOpen) {
+    filterPanel.style.display = 'block';
+    requestAnimationFrame(() => {
+      filterPanel.style.height = 'auto';
+      filterPanel.style.opacity = '1';
+    });
+  } else {
+    filterPanel.style.opacity = '0';
+    filterPanel.style.height = '0';
+    setTimeout(() => { filterPanel.style.display = 'none'; }, 300);
   }
+});
+
+categoryFilters?.querySelectorAll('.filter-pill').forEach(pill => {
+  pill.addEventListener('click', () => {
+    categoryFilters.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+    pill.classList.add('active');
+    currentCategory = pill.dataset.category;
+    renderCards();
+  });
+});
+
+// =======================================================================
+// МОДАЛЬНОЕ ОКНО ДЕТАЛЕЙ ИДЕИ (#detailsModal)
+// =======================================================================
+const detailsModal = document.getElementById('detailsModal');
+const detailsBackdrop = document.getElementById('detailsBackdrop');
+const detailsCloseBtn = document.getElementById('detailsCloseBtn');
+const modalDynamicContent = document.getElementById('modalDynamicContent');
+
+function openIdeaModal(idea, cardEl) {
+  currentCardElement = cardEl;
+  const isFav = favorites.includes(idea.id);
+
+  modalDynamicContent.innerHTML = `
+    <span class="modal-badge">${idea.category}</span>
+    <h2>${idea.name}</h2>
+    <div class="modal-grid-info">
+      <div><strong>Капитал:</strong> от ${idea.capital.toLocaleString('ru-RU')} ₽</div>
+      <div><strong>Сложность:</strong> ${idea.complexity}</div>
+      <div><strong>Потенциал:</strong> ${idea.potential}</div>
+      <div><strong>Рейтинг:</strong> ${idea.rating.toFixed(1)} ★</div>
+    </div>
+    <div class="modal-blocks">
+      <h3><i data-lucide="file-text"></i> Описание</h3><p>${idea.desc}</p>
+      <h3><i data-lucide="lightbulb"></i> Почему это работает</h3><p>${idea.why}</p>
+      <h3><i data-lucide="thumbs-up"></i> Плюсы</h3><p>${idea.pros}</p>
+      <h3><i data-lucide="thumbs-down"></i> Минусы</h3><p>${idea.cons}</p>
+      <h3><i data-lucide="rocket"></i> Как начать</h3><p>${idea.how}</p>
+      <h3><i data-lucide="alert-triangle"></i> Риски</h3><p>${idea.risks}</p>
+    </div>
+    <button class="btn-glow" id="favToggleBtn" style="margin-top:1rem;">${isFav ? '★ В избранном' : '☆ Добавить в избранное'}</button>
+    <div class="comments-section" id="commentsSection">Загрузка комментариев...</div>
+  `;
+
+  if (window.lucide) lucide.createIcons();
+
+  document.getElementById('favToggleBtn')?.addEventListener('click', async () => {
+    await toggleFavSupabase(idea.id);
+    openIdeaModal(idea, currentCardElement);
+  });
+
+  detailsModal.classList.add('active');
+  isModalOpen = true;
+  loadCommentsUI(idea.id);
 }
 
-function renderArticles(data) {
-  const grid = document.getElementById('articlesGrid');
-  grid.innerHTML = '';
+async function loadCommentsUI(ideaId) {
+  const commentsSection = document.getElementById('commentsSection');
+  if (!commentsSection) return;
+  const comments = await loadComments(ideaId);
 
-  data.forEach(article => {
-    const card = document.createElement('div');
-    card.className = 'glass-card card-animate';
-    card.innerHTML = `
-      <div class="card-badge">${article.category}</div>
+  commentsSection.innerHTML = `
+    <h3>Комментарии (${comments.length})</h3>
+    ${comments.length ? comments.map(c => `
+      <div class="comment-item">
+        <div class="comment-author">${c.user_name}</div>
+        <div class="comment-text">${c.text}</div>
+        <div class="comment-time">${new Date(c.created_at).toLocaleString('ru-RU')}</div>
+      </div>`).join('') : '<p style="opacity:0.6;">Пока нет комментариев</p>'}
+    <div class="comment-input-group">
+      <input type="text" id="newCommentInput" placeholder="${currentUser ? 'Написать комментарий...' : 'Войдите, чтобы комментировать'}" ${currentUser ? '' : 'disabled'} />
+      <button id="submitCommentBtn" ${currentUser ? '' : 'disabled'}>Отправить</button>
+    </div>
+  `;
+
+  const input = document.getElementById('newCommentInput');
+  const submitBtn = document.getElementById('submitCommentBtn');
+
+  submitBtn?.addEventListener('click', async () => {
+    const text = input.value.trim();
+    if (text) {
+      await addComment(ideaId, text);
+      input.value = '';
+      loadCommentsUI(ideaId);
+    }
+  });
+  input?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') submitBtn?.click();
+  });
+}
+
+function closeDetailsModal() {
+  detailsModal.classList.remove('active');
+  isModalOpen = false;
+  currentCardElement = null;
+}
+
+detailsBackdrop?.addEventListener('click', closeDetailsModal);
+detailsCloseBtn?.addEventListener('click', closeDetailsModal);
+
+// =======================================================================
+// ВКЛАДКА "СТАТЬИ"
+// =======================================================================
+let articlesLoaded = false;
+
+async function loadArticlesData() {
+  if (articlesLoaded) return;
+  try {
+    const res = await fetch('articles.json');
+    articles = await res.json();
+  } catch (error) {
+    console.error('Не удалось загрузить articles.json:', error);
+    articles = [];
+  }
+  articlesLoaded = true;
+}
+
+function renderArticleCard(article) {
+  return `
+    <div class="glass-card" data-article-id="${article.id}">
+      <span class="card-badge">${article.category}</span>
       <h3 class="card-title">${article.title}</h3>
       <p class="card-desc">${article.description}</p>
       <div class="card-meta">
-        <div class="meta-item"><i data-lucide="clock"></i> <span>${article.readTime} мин</span></div>
-        <div class="meta-item"><i data-lucide="eye"></i> <span>${article.views}</span></div>
+        <span class="meta-item"><i data-lucide="user"></i> ${article.author}</span>
+        <span class="meta-item"><i data-lucide="clock"></i> ${article.readTime} мин</span>
       </div>
-    `;
-    card.addEventListener('click', () => openDetailsModal('article', article));
-    grid.appendChild(card);
-  });
-  if (typeof lucide !== 'undefined') lucide.createIcons();
+    </div>`;
 }
 
-// ===== ДИНАМИЧЕСКИЕ МОДАЛЬНЫЕ ОКНА =====
-function initModals() {
-  const detailsModal = document.getElementById('detailsModal');
-  const loginModal = document.getElementById('loginModal');
+async function renderArticles() {
+  const articlesGrid = document.getElementById('articlesGrid');
+  if (!articlesGrid) return;
 
-  document.getElementById('loginBtn').addEventListener('click', () => {
-    loginModal.classList.add('active');
-  });
+  await loadArticlesData();
 
-  document.getElementById('loginCloseBtn').addEventListener('click', () => loginModal.classList.remove('active'));
-  document.getElementById('detailsCloseBtn').addEventListener('click', () => detailsModal.classList.remove('active'));
-  document.getElementById('detailsBackdrop').addEventListener('click', () => detailsModal.classList.remove('active'));
-  document.getElementById('loginBackdrop').addEventListener('click', () => loginModal.classList.remove('active'));
-}
+  articlesGrid.innerHTML = articles.length
+    ? articles.map(renderArticleCard).join('')
+    : '<p style="opacity:0.6;">Статьи не найдены</p>';
 
-function openDetailsModal(type, data) {
-  const modal = document.getElementById('detailsModal');
-  const container = document.getElementById('modalDynamicContent');
-  container.innerHTML = '';
+  if (window.lucide) lucide.createIcons();
 
-  if (type === 'idea') {
-    container.innerHTML = `
-      <span class="modal-badge">${data.category}</span>
-      <h2 class="modal-title">${data.name}</h2>
-      <p class="modal-main-desc">${data.desc}</p>
-      <div class="modal-grid-info">
-        <div><strong>Капитал:</strong> ${data.capital.toLocaleString()} ₽</div>
-        <div><strong>Сложность:</strong> ${data.complexity}</div>
-        <div><strong>Потенциал:</strong> ${data.potential}</div>
-        <div><strong>Рейтинг:</strong> ⭐ ${data.rating}</div>
-      </div>
-      <div class="modal-blocks">
-        <h3><i data-lucide="trending-up"></i> Почему сейчас?</h3><p>${data.why}</p>
-        <h3><i data-lucide="check-circle"></i> Плюсы</h3><p>${data.pros}</p>
-        <h3><i data-lucide="alert-triangle"></i> Минусы</h3><p>${data.cons}</p>
-        <h3><i data-lucide="play"></i> С чего начать</h3><p>${data.how}</p>
-        <h3><i data-lucide="shield-alert"></i> Риски</h3><p>${data.risks}</p>
-      </div>
-    `;
-  } else if (type === 'article') {
-    container.innerHTML = `
-      <span class="modal-badge">${data.category}</span>
-      <h2 class="modal-title">${data.title}</h2>
-      <div class="article-meta-info">Автор: ${data.author} | Дата: ${data.date}</div>
-      <hr style="border-color:rgba(255,255,255,0.1); margin:1rem 0;">
-      <div class="article-rich-content">${data.content}</div>
-    `;
-  }
-
-  modal.classList.add('active');
-  if (typeof lucide !== 'undefined') lucide.createIcons();
-}
-
-// ===== ИЗБРАННОЕ И ТЕМЫ =====
-function toggleSaveIdea(id, btn) {
-  if (savedIdeas.includes(id)) {
-    savedIdeas = savedIdeas.filter(item => item !== id);
-    btn.classList.remove('active');
-  } else {
-    savedIdeas.push(id);
-    btn.classList.add('active');
-  }
-  localStorage.setItem('savedIdeas', JSON.stringify(savedIdeas));
-  updateSavedCount();
-}
-
-function updateSavedCount() {
-  document.getElementById('savedCount').textContent = savedIdeas.length;
-}
-
-// ===== ПОИСК И ФИЛЬТРЫ =====
-function initFilters() {
-  const searchInput = document.getElementById('ideasSearch');
-  const clearBtn = document.getElementById('searchClear');
-  const filterToggle = document.getElementById('filterToggleBtn');
-  const filterPanel = document.getElementById('filterPanel');
-
-  searchInput.addEventListener('input', function() {
-    clearBtn.style.display = this.value ? 'flex' : 'none';
-    filterAndRender();
-  });
-
-  clearBtn.addEventListener('click', () => {
-    searchInput.value = '';
-    clearBtn.style.display = 'none';
-    filterAndRender();
-  });
-
-  filterToggle.addEventListener('click', () => {
-    const isHidden = filterPanel.style.display === 'none';
-    if (isHidden) {
-      filterPanel.style.display = 'block';
-      gsap.fromTo(filterPanel, { height: 0, opacity: 0 }, { height: 'auto', opacity: 1, duration: 0.3 });
-    } else {
-      gsap.to(filterPanel, { height: 0, opacity: 0, duration: 0.3, onComplete: () => filterPanel.style.display = 'none' });
-    }
-  });
-
-  document.querySelectorAll('#categoryFilters .filter-pill').forEach(pill => {
-    pill.addEventListener('click', (e) => {
-      document.querySelectorAll('#categoryFilters .filter-pill').forEach(p => p.classList.remove('active'));
-      e.currentTarget.classList.add('active');
-      filterAndRender();
+  articlesGrid.querySelectorAll('.glass-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const article = articles.find(a => a.id === parseInt(card.dataset.articleId, 10));
+      if (article) openArticleModal(article);
     });
   });
 }
 
-function filterAndRender() {
-  const query = document.getElementById('ideasSearch').value.toLowerCase();
-  const activeCategory = document.querySelector('#categoryFilters .filter-pill.active').getAttribute('data-category');
-
-  const filtered = ideas.filter(idea => {
-    const matchesSearch = idea.name.toLowerCase().includes(query) || idea.desc.toLowerCase().includes(query);
-    const matchesCategory = activeCategory === 'all' || idea.category === activeCategory;
-    return matchesSearch && matchesCategory;
-  });
-
-  renderIdeas(filtered);
+function openArticleModal(article) {
+  modalDynamicContent.innerHTML = `
+    <span class="modal-badge">${article.category}</span>
+    <h2>${article.title}</h2>
+    <p style="opacity:0.6; margin: 0.5rem 0 1.5rem;">${article.author} · ${new Date(article.date).toLocaleDateString('ru-RU')} · ${article.readTime} мин чтения</p>
+    <div class="modal-blocks">${article.content}</div>
+  `;
+  detailsModal.classList.add('active');
+  isModalOpen = true;
 }
 
-// Переключатель ночной темы
-document.getElementById('themeToggleBtn').addEventListener('click', () => {
-  document.body.classList.toggle('light-theme');
-  const isLight = document.body.classList.contains('light-theme');
-  document.getElementById('themeToggleBtn').innerHTML = isLight ? `<i data-lucide="sun"></i>` : `<i data-lucide="moon"></i>`;
-  if (typeof lucide !== 'undefined') lucide.createIcons();
+// =======================================================================
+// ИНИЦИАЛИЗАЦИЯ
+// =======================================================================
+document.addEventListener('DOMContentLoaded', async () => {
+  await updateUserUI();
+  await loadUserData();
+
+  renderCards();
+
+  const active = document.querySelector('.nav-tab.active') || navTabs[0];
+  if (active) moveIndicator(active);
+
+  if (window.lucide) lucide.createIcons();
+
+  if (window.gsap) {
+    gsap.from('.hero-title', { opacity: 0, y: 50, duration: 1, ease: 'power2.out' });
+    gsap.from('.hero-subtitle', { opacity: 0, y: 30, duration: 1, delay: 0.2, ease: 'power2.out' });
+  }
 });
