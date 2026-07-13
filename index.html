@@ -45,74 +45,15 @@
       </nav>
 
       <div class="navbar-right">
-        <div class="navbar-glass-auth" id="authContainer">
-  <button class="btn-glow btn-auth-wide" id="authBtn">Войти / Регистрация</button>
-  
-  <div id="userProfileNav" style="display: none; cursor: pointer; position: relative;">
-    <img src="https://ui-avatars.com/api/?name=User&background=00ffcc&color=0b0d10" id="navAvatar" class="nav-avatar" alt="Профиль">
-  </div>
-</div>
-
-<div id="profilePopover" class="profile-popover glass">
-  <div class="profile-scroll-area">
-    <div class="profile-header">
-      <div class="avatar-wrapper">
-        <img src="https://ui-avatars.com/api/?name=User&background=00ffcc&color=0b0d10" id="popoverAvatar" alt="Аватар">
-        <button id="changeAvatarBtn" class="edit-avatar-btn"><i data-lucide="camera"></i></button>
-        <input type="file" id="avatarUpload" accept="image/*" style="display: none;">
-      </div>
-      <h3 id="profileName">Имя пользователя</h3>
-      <p id="profileAge" style="opacity: 0.6; font-size: 0.85rem; margin-top: 4px;">В IdeaHub с ...</p>
-    </div>
-
-    <div class="profile-stats">
-      <div class="stat-item">
-        <i data-lucide="message-square"></i>
-        <div><strong id="statComments">0</strong><br><span>Отзывов</span></div>
-      </div>
-      <div class="stat-item">
-        <i data-lucide="arrow-up" style="color: var(--accent-color);"></i>
-        <div><strong id="statUpvotes">0</strong><br><span>Апвоутов</span></div>
-      </div>
-      <div class="stat-item">
-        <i data-lucide="book-open"></i>
-        <div><strong id="statArticles">0</strong><br><span>Статей прочитано</span></div>
-      </div>
-      <div class="stat-item">
-        <i data-lucide="lightbulb"></i>
-        <div><strong id="statIdeas">0</strong><br><span>Идей просмотрено</span></div>
-      </div>
-    </div>
-
-    <div class="profile-actions">
-      <div class="dropdown-wrapper">
-        <button id="multiAccountBtn" class="btn-icon-glass"><i data-lucide="more-horizontal"></i></button>
-        <div id="multiAccountMenu" class="multi-account-menu glass">
-          <button><i data-lucide="plus"></i> Добавить аккаунт</button>
+        <div class="navbar-glass-auth">
+          <div class="auth-container">
+            <button class="btn-glow btn-auth-wide" id="authBtn">Войти / Регистрация</button>
+            
+            <div id="userProfileTrigger" class="profile-avatar-trigger" style="display: none;">
+              <img id="headerAvatar" src="https://api.dicebear.com/7.x/bottts/svg?seed=IdeaHub" alt="Avatar">
+            </div>
           </div>
-      </div>
-      <button id="logoutBtn" class="btn-glow" style="flex: 1;">Выйти</button>
-    </div>
-  </div>
-  
-  <div class="profile-fixed-footer">
-    <button id="settingsBtn" class="btn-settings"><i data-lucide="settings"></i> Настройки профиля</button>
-  </div>
-</div>
-
-<div id="cropperModalOverlay" class="modal-overlay">
-  <div class="modal-window glass" style="max-width: 500px;">
-    <h3>Обрезка фото</h3>
-    <div class="cropper-container" style="max-height: 400px; margin: 1rem 0;">
-      <img id="imageToCrop" src="" style="max-width: 100%;">
-    </div>
-    <div style="display: flex; gap: 1rem; justify-content: flex-end;">
-      <button class="btn-filter" id="cancelCropBtn">Отмена</button>
-      <button class="btn-glow" id="applyCropBtn">Применить</button>
-    </div>
-  </div>
-</div>
-
+        </div>
       </div>
     </div>
   </header>
