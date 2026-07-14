@@ -131,13 +131,13 @@
     </div>
   </div>
 
-  <div id="authModal" class="modal" style="display: none;">
+  <div id="authModal" class="modal">
     <div class="modal-content glass">
       <span class="close-modal" id="closeAuth">&times;</span>
       <h2 id="modalTitle">Вход в систему</h2>
       <p id="modalSub" style="color: var(--nav-text); margin-bottom: 1.5rem;">Введите данные для доступа к IdeaHub</p>
       
-      <form id="authForm">
+      <form id="authForm" novalidate>
         <div id="authErrorMsg" class="auth-error-msg"></div>
         <div class="input-group">
           <label>Email</label>

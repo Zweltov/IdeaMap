@@ -101,7 +101,7 @@ function recordView(type) {
 }
 
 // =======================================================================
-// ВКЛАДКИ ВЕРХНЕЙ ПАНЕЛИ
+// ВКЛАДКИ ВЕРХНЕЙ ПАНЕЛИ (ДОБАВЛЕНА ЖИДКАЯ АНИМАЦИЯ)
 // =======================================================================
 const navTabs = document.querySelectorAll('.nav-tab');
 const navIndicator = document.getElementById('navIndicator');
@@ -109,8 +109,30 @@ const tabContents = document.querySelectorAll('.tab-content');
 
 function moveIndicator(tabEl) {
   if (!tabEl || !navIndicator) return;
-  navIndicator.style.width = `${tabEl.offsetWidth}px`;
-  navIndicator.style.transform = `translateX(${tabEl.offsetLeft}px)`;
+  
+  // Проверяем, первоначальная ли это загрузка или переход
+  const isInitial = navIndicator.style.width === '0px' || !navIndicator.style.width;
+  
+  if (!isInitial) {
+    // Включаем "сплющивание" и запускаем блик
+    navIndicator.classList.add('is-moving');
+    // Делаем капсулу чуть шире во время полета
+    navIndicator.style.width = `${tabEl.offsetWidth + 15}px`;
+    // Смещаем координату X чуть назад, чтобы растяжение было симметричным
+    navIndicator.style.transform = `translateX(${tabEl.offsetLeft - 7.5}px)`;
+
+    clearTimeout(navIndicator.moveTimeout);
+    navIndicator.moveTimeout = setTimeout(() => {
+        // Возвращаем в нормальное состояние по прибытии
+        navIndicator.style.width = `${tabEl.offsetWidth}px`;
+        navIndicator.style.transform = `translateX(${tabEl.offsetLeft}px)`;
+        navIndicator.classList.remove('is-moving');
+    }, 180); 
+  } else {
+    // При первой загрузке просто ставим без эффекта
+    navIndicator.style.width = `${tabEl.offsetWidth}px`;
+    navIndicator.style.transform = `translateX(${tabEl.offsetLeft}px)`;
+  }
 }
 
 function switchTab(tabName) {
@@ -155,12 +177,14 @@ const toggleAuthLink = document.getElementById('toggleAuthLink');
 
 function openAuthModal() {
   authErrorMsg.style.display = 'none'; // прячем ошибки при открытии
-  authModal.style.display = 'flex';
+  authModal.classList.add('active'); // Используем классы для красивой анимации вместо display: flex
 }
 function closeAuthModal() {
-  authModal.style.display = 'none';
-  authForm?.reset();
-  authErrorMsg.style.display = 'none';
+  authModal.classList.remove('active');
+  setTimeout(() => {
+    authForm?.reset();
+    authErrorMsg.style.display = 'none';
+  }, 300); // Сбрасываем форму после окончания анимации скрытия
 }
 
 function setAuthMode(registerMode) {
@@ -210,11 +234,27 @@ toggleAuthLink?.addEventListener('click', (e) => {
   setAuthMode(!isRegisterMode);
 });
 
+// Кнопка Enter уже работает внутри input из-за тега <form> и type="submit", 
+// здесь мы только перехватываем сам ивент отправки для красивых уведомлений.
 authForm?.addEventListener('submit', async (e) => {
   e.preventDefault();
   authErrorMsg.style.display = 'none'; // сброс ошибки перед запросом
-  const email = authEmailInput.value;
+  
+  const email = authEmailInput.value.trim();
   const password = authPasswordInput.value;
+
+  // Кастомная красивая валидация, заменяющая дефолтное окно браузера
+  if (!email || !email.includes('@') || !email.includes('.')) {
+    showNotification('Пожалуйста, введите корректный email-адрес', 'error');
+    authEmailInput.focus();
+    return;
+  }
+  
+  if (!password || password.length < 6) {
+    showNotification('Пароль должен быть не менее 6 символов', 'error');
+    authPasswordInput.focus();
+    return;
+  }
 
   if (isRegisterMode) {
     const name = authNameInput.value;
@@ -237,8 +277,7 @@ async function signUp(email, password, name) {
     showNotification('Аккаунт создан! Проверьте почту для подтверждения.');
     return data;
   } catch (error) {
-    authErrorMsg.textContent = translateError(error.message);
-    authErrorMsg.style.display = 'block';
+    showNotification(translateError(error.message), 'error');
     return null;
   }
 }
@@ -252,8 +291,7 @@ async function signIn(email, password) {
     renderCards();
     return data;
   } catch (error) {
-    authErrorMsg.textContent = translateError(error.message);
-    authErrorMsg.style.display = 'block';
+    showNotification(translateError(error.message), 'error');
     return null;
   }
 }
