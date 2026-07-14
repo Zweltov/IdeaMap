@@ -149,34 +149,43 @@ body {
               width 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), 
               height 0.2s ease, top 0.2s ease, 
               background 0.3s ease, box-shadow 0.3s ease;
-  overflow: hidden; /* нужно для блика внутри */
+  overflow: hidden;
 }
 
-/* Эффект вытягивания/сплющивания (жидкая анимация) */
+/* Эффект вытягивания/сплющивания — мягкий, без сильного изгиба */
 .nav-indicator.is-moving {
-  height: calc(100% - 10px);
-  top: 5px;
+  height: calc(100% - 4px);
+  top: 2px;
 }
 
-/* Блик, пролетающий при движении капсулы */
+/* Блик, пролетающий при движении капсулы — слабый, по направлению движения */
 .nav-indicator::after {
   content: '';
   position: absolute;
   top: 0; 
   left: -100%;
-  width: 50%; 
+  width: 40%; 
   height: 100%;
-  background: linear-gradient(to right, transparent, rgba(255,255,255,0.4), transparent);
-  transform: skewX(-20deg);
+  background: linear-gradient(to right, transparent, rgba(255,255,255,0.08), transparent);
+  transform: skewX(-15deg);
   opacity: 0;
 }
 .nav-indicator.is-moving::after {
   animation: glareEffect 0.35s ease-in-out;
   opacity: 1;
 }
+/* Движение вправо: блик слева направо (дефолт) */
 @keyframes glareEffect {
   0% { left: -100%; }
   100% { left: 200%; }
+}
+/* Движение влево: блик справа налево */
+.nav-indicator[data-dir="-1"]::after {
+  animation: glareEffectReverse 0.35s ease-in-out;
+}
+@keyframes glareEffectReverse {
+  0% { left: 200%; }
+  100% { left: -100%; }
 }
 
 /* Свечение индикатора при наведении мышью на активную вкладку */
@@ -521,21 +530,50 @@ body {
 .small-modal {
   max-width: 400px !important;
 }
+
+/* Стеклянная кнопка-крестик (как btn-icon на сайте) */
 .modal-close {
   position: absolute;
-  top: 1.5rem;
-  right: 1.5rem;
-  background: none;
-  border: none;
+  top: 1.2rem;
+  right: 1.2rem;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--card-border);
   color: var(--text-color);
-  font-size: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  opacity: 0.5;
-  transition: opacity 0.2s;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: background 0.2s, transform 0.2s, border-color 0.2s;
+  z-index: 10;
+  padding: 0;
+  box-sizing: border-box;
+  line-height: 1;
+}
+.modal-close i,
+.modal-close svg {
+  width: 18px !important;
+  height: 18px !important;
+  display: block;
+  margin: auto;
 }
 .modal-close:hover {
-  opacity: 1;
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: scale(1.05);
 }
+
+/* Для старого &times; крестика (auth modal) сохраняем текстовый стиль */
+.close-modal {
+  position: absolute;
+  top: 1.5rem; right: 1.5rem;
+  font-size: 1.8rem; color: var(--nav-text); cursor: pointer;
+}
+
 .modal-badge {
   display: inline-block;
   padding: 0.4rem 1rem;
@@ -568,7 +606,7 @@ body {
   line-height: 1.5;
 }
 
-/* Авторизация (Модифицировано для красивой анимации) */
+/* Авторизация */
 .auth-title {
   font-size: 1.5rem;
   font-weight: 700;
@@ -620,18 +658,11 @@ body {
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   text-align: center;
-  
-  /* Эффект вылета */
   transform: translateY(30px) scale(0.95);
   transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .modal.active .modal-content {
   transform: translateY(0) scale(1);
-}
-.close-modal {
-  position: absolute;
-  top: 1.5rem; right: 1.5rem;
-  font-size: 1.8rem; color: var(--nav-text); cursor: pointer;
 }
 .auth-error-msg {
   color: #ff4d4d;
@@ -743,7 +774,6 @@ body {
   padding: 2.5rem;
   overflow-y: auto;
   max-height: 85vh; 
-  /* Скрываем ползунок */
   scrollbar-width: none; 
   -ms-overflow-style: none;
 }
@@ -835,52 +865,162 @@ body {
   border-top: 1px solid var(--card-border);
 }
 
-/* Inline меню мультиаккаунтов */
-.inline-expand-menu {
-  max-height: 0;
-  overflow: hidden;
-  opacity: 0;
-  transition: max-height 0.4s ease, opacity 0.4s ease;
-}
-.inline-expand-menu.expanded {
-  max-height: 300px;
-  opacity: 1;
+/* ===== Кнопка-капсула "Мои аккаунты" ===== */
+.account-switch-wrapper {
+  position: relative;
+  width: 100%;
 }
 
-.btn-icon {
-  background: rgba(255,255,255,0.05);
-  border: 1px solid var(--card-border);
-  color: var(--text-color);
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
+.acc-capsule-btn {
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 10px;
+  padding: 0.7rem 1.6rem;
+  border-radius: 100px;
+  background: var(--nav-bg);
+  border: 1px solid var(--nav-border);
+  color: var(--text-color);
+  font-size: 1.05rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: background 0.2s;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transition: background 0.2s, border-color 0.2s, transform 0.2s;
 }
-.btn-icon:hover {
-  background: rgba(255,255,255,0.1);
+.acc-capsule-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+  transform: scale(1.01);
+}
+.acc-capsule-btn #accSwitchIcon {
+  transition: transform 0.3s ease;
 }
 
-.btn-ghost {
+/* ===== Выпадающее меню из капсулы ===== */
+.acc-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  background: rgba(20, 24, 30, 0.92);
+  border: 1px solid var(--nav-border);
+  border-radius: 1.5rem;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+  padding: 0.5rem;
+  z-index: 50;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-8px) scale(0.97);
+  transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.acc-dropdown.open {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0) scale(1);
+}
+
+.acc-dropdown-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 240px;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.acc-dropdown-list::-webkit-scrollbar { display: none; }
+
+.acc-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0.7rem 1rem;
+  border-radius: 0.8rem;
   background: transparent;
   border: none;
   color: var(--text-color);
-  padding: 0.6rem 1rem;
-  border-radius: 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 500;
   cursor: pointer;
+  width: 100%;
+  text-align: left;
   transition: background 0.2s;
 }
-.btn-ghost:hover {
-  background: rgba(255,255,255,0.05);
+.acc-dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+.acc-dropdown-item img {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.acc-dropdown-item .acc-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+}
+.acc-dropdown-item .acc-item-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.acc-dropdown-item .acc-item-email {
+  font-size: 0.78rem;
+  opacity: 0.5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.acc-dropdown-item.active-account {
+  background: rgba(0, 255, 204, 0.08);
+  border: 1px solid rgba(0, 255, 204, 0.2);
+}
+.acc-dropdown-item.logout {
+  color: #ff4d4d;
+}
+.acc-dropdown-item.logout:hover {
+  background: rgba(255, 77, 77, 0.1);
+}
+
+.acc-dropdown-actions {
+  border-top: 1px solid var(--card-border);
+  margin-top: 4px;
+  padding-top: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.acc-dropdown-empty {
+  padding: 1rem;
+  text-align: center;
+  font-size: 0.85rem;
+  opacity: 0.5;
+}
+
+.acc-remove-btn {
+  flex-shrink: 0;
+  border-radius: 50%;
+  padding: 4px !important;
+  transition: background 0.2s;
+}
+.acc-remove-btn:hover {
+  background: rgba(255, 77, 77, 0.15) !important;
 }
 
 /* Капсула настроек с градиентом внизу скролла */
 .profile-settings-wrapper {
   position: sticky;
-  bottom: -2.5rem; /* Компенсируем паддинг родителя */
+  bottom: -2.5rem;
   left: 0;
   width: calc(100% + 5rem);
   margin-left: -2.5rem;
@@ -888,10 +1028,10 @@ body {
   display: flex;
   justify-content: center;
   background: linear-gradient(to bottom, rgba(20,24,30,0) 0%, rgba(20,24,30,0.85) 40%, rgba(20,24,30,0.98) 100%);
-  pointer-events: none; /* Пропускаем клики на фон */
+  pointer-events: none;
 }
 .capsule-settings-btn {
-  pointer-events: auto; /* Возвращаем клики самой кнопке */
+  pointer-events: auto;
   margin: 0 auto;
   border: 1px solid rgba(255, 255, 255, 0.15) !important;
   background: rgba(255, 255, 255, 0.05) !important;

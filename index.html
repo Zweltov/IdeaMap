@@ -164,7 +164,9 @@
   <div id="userProfileModal" class="modal-overlay">
     <div class="modal-backdrop" id="userProfileBackdrop"></div>
     <div class="modal-window glass user-profile-window">
-       <button class="modal-close" id="userProfileClose" style="z-index: 10;">&times;</button>
+       <button class="modal-close glass-close-btn" id="userProfileClose">
+         <i data-lucide="x"></i>
+       </button>
 
        <div class="profile-scroll-content">
           <div class="profile-header">
@@ -206,15 +208,23 @@
           </div>
           
           <div class="profile-bottom-controls">
-             <div class="account-switch-wrapper" style="width: 100%;">
-                 <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; padding: 10px 0;" id="accSwitchBtn">
-                     <span style="font-weight: 500; font-size: 1.05rem;">Мои аккаунты</span>
-                     <button class="btn-icon" style="width: 36px; height: 36px;"><i data-lucide="chevron-down" id="accSwitchIcon" style="transition: transform 0.3s;"></i></button>
-                 </div>
-                 <div id="accSwitchMenu" class="inline-expand-menu">
-                     <div style="padding: 10px 0; border-top: 1px solid var(--card-border); margin-top: 5px;">
-                        <button class="btn-ghost" style="width: 100%; text-align: left; margin-bottom: 5px;"><i data-lucide="plus" style="width:16px; display:inline-block; vertical-align:middle; margin-right:8px;"></i> Добавить аккаунт</button>
-                        <button id="profileLogoutBtn" class="btn-ghost" style="width: 100%; text-align: left; color: #ff4d4d;"><i data-lucide="log-out" style="width:16px; display:inline-block; vertical-align:middle; margin-right:8px;"></i> Выйти из аккаунта</button>
+             <div class="account-switch-wrapper">
+                 <button class="acc-capsule-btn" id="accSwitchBtn">
+                     <i data-lucide="users" style="width: 18px; height: 18px;"></i>
+                     <span>Мои аккаунты</span>
+                     <i data-lucide="chevron-down" id="accSwitchIcon" style="width: 18px; height: 18px; transition: transform 0.3s;"></i>
+                 </button>
+                 <div id="accSwitchMenu" class="acc-dropdown">
+                     <div class="acc-dropdown-list" id="accDropdownList"></div>
+                     <div class="acc-dropdown-actions">
+                         <button class="acc-dropdown-item" id="addAccountBtn">
+                             <i data-lucide="plus" style="width: 18px; height: 18px;"></i>
+                             <span>Добавить аккаунт</span>
+                         </button>
+                         <button class="acc-dropdown-item logout" id="profileLogoutBtn">
+                             <i data-lucide="log-out" style="width: 18px; height: 18px;"></i>
+                             <span>Выйти</span>
+                         </button>
                      </div>
                  </div>
              </div>

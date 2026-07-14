@@ -39,6 +39,31 @@ let currentCardElement = null;
 let isRegisterMode = false;
 let articles = [];
 
+// ===== ХРАНИЛИЩЕ АККАУНТОВ (мультиаккаунт) =====
+function getStoredAccounts() {
+  return JSON.parse(localStorage.getItem('ideahub_accounts')) || [];
+}
+function saveStoredAccounts(accs) {
+  localStorage.setItem('ideahub_accounts', JSON.stringify(accs));
+}
+function addStoredAccount(user) {
+  const accs = getStoredAccounts();
+  const exists = accs.find(a => a.id === user.id);
+  if (!exists) {
+    accs.push({
+      id: user.id,
+      email: user.email,
+      name: user.user_metadata?.name || user.email?.split('@')[0] || 'Пользователь',
+      avatar: user.user_metadata?.avatar || ''
+    });
+    saveStoredAccounts(accs);
+  }
+}
+function removeStoredAccount(userId) {
+  const accs = getStoredAccounts().filter(a => a.id !== userId);
+  saveStoredAccounts(accs);
+}
+
 // ===== КРАСИВЫЕ УВЕДОМЛЕНИЯ (TOASTS) =====
 function showNotification(message, type = 'success', duration = 3000) {
   const container = document.getElementById('toastContainer');
@@ -47,7 +72,6 @@ function showNotification(message, type = 'success', duration = 3000) {
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
   
-  // Добавляем иконку в зависимости от типа
   let iconName = type === 'error' ? 'alert-circle' : 'check-circle';
   let iconColor = type === 'error' ? '#ff4d4d' : 'var(--accent-color)';
 
@@ -61,13 +85,10 @@ function showNotification(message, type = 'success', duration = 3000) {
   
   if(window.lucide) lucide.createIcons({root: toast});
 
-  // Плавное появление
   setTimeout(() => toast.classList.add('show'), 10);
 
-  // Удаление по таймеру
   let timeout = setTimeout(() => closeToast(toast), duration);
 
-  // Закрытие по крестику
   const closeBtn = toast.querySelector('.toast-close');
   closeBtn.onclick = () => {
       clearTimeout(timeout);
@@ -77,10 +98,9 @@ function showNotification(message, type = 'success', duration = 3000) {
 
 function closeToast(toast) {
   toast.classList.remove('show');
-  setTimeout(() => toast.remove(), 400); // ждем конец css транзиции
+  setTimeout(() => toast.remove(), 400);
 }
 
-// Перевод ошибок Supabase
 function translateError(msg) {
   const translations = {
     "Invalid login credentials": "Неверный логин или пароль",
@@ -101,37 +121,42 @@ function recordView(type) {
 }
 
 // =======================================================================
-// ВКЛАДКИ ВЕРХНЕЙ ПАНЕЛИ (ДОБАВЛЕНА ЖИДКАЯ АНИМАЦИЯ)
+// ВКЛАДКИ ВЕРХНЕЙ ПАНЕЛИ — мягкая капсула, слабый блик по направлению
 // =======================================================================
 const navTabs = document.querySelectorAll('.nav-tab');
 const navIndicator = document.getElementById('navIndicator');
 const tabContents = document.querySelectorAll('.tab-content');
 
+let lastIndicatorX = 0;
+
 function moveIndicator(tabEl) {
   if (!tabEl || !navIndicator) return;
   
-  // Проверяем, первоначальная ли это загрузка или переход
   const isInitial = navIndicator.style.width === '0px' || !navIndicator.style.width;
   
   if (!isInitial) {
-    // Включаем "сплющивание" и запускаем блик
+    const targetX = tabEl.offsetLeft;
+    const direction = targetX > lastIndicatorX ? 1 : -1;
+
     navIndicator.classList.add('is-moving');
-    // Делаем капсулу чуть шире во время полета
-    navIndicator.style.width = `${tabEl.offsetWidth + 15}px`;
-    // Смещаем координату X чуть назад, чтобы растяжение было симметричным
-    navIndicator.style.transform = `translateX(${tabEl.offsetLeft - 7.5}px)`;
+    // Направление блика: data-attr, CSS читает его
+    navIndicator.dataset.dir = direction > 0 ? '1' : '-1';
+
+    // Лёгкое расширение — минимальное, чтобы капсула не выходила за пределы
+    navIndicator.style.width = `${tabEl.offsetWidth + 4}px`;
+    navIndicator.style.transform = `translateX(${tabEl.offsetLeft - 2}px)`;
 
     clearTimeout(navIndicator.moveTimeout);
     navIndicator.moveTimeout = setTimeout(() => {
-        // Возвращаем в нормальное состояние по прибытии
         navIndicator.style.width = `${tabEl.offsetWidth}px`;
         navIndicator.style.transform = `translateX(${tabEl.offsetLeft}px)`;
         navIndicator.classList.remove('is-moving');
+        lastIndicatorX = tabEl.offsetLeft;
     }, 180); 
   } else {
-    // При первой загрузке просто ставим без эффекта
     navIndicator.style.width = `${tabEl.offsetWidth}px`;
     navIndicator.style.transform = `translateX(${tabEl.offsetLeft}px)`;
+    lastIndicatorX = tabEl.offsetLeft;
   }
 }
 
@@ -176,15 +201,15 @@ const toggleAuthText = document.getElementById('toggleAuthText');
 const toggleAuthLink = document.getElementById('toggleAuthLink');
 
 function openAuthModal() {
-  authErrorMsg.style.display = 'none'; // прячем ошибки при открытии
-  authModal.classList.add('active'); // Используем классы для красивой анимации вместо display: flex
+  authErrorMsg.style.display = 'none';
+  authModal.classList.add('active');
 }
 function closeAuthModal() {
   authModal.classList.remove('active');
   setTimeout(() => {
     authForm?.reset();
     authErrorMsg.style.display = 'none';
-  }, 300); // Сбрасываем форму после окончания анимации скрытия
+  }, 300);
 }
 
 function setAuthMode(registerMode) {
@@ -212,7 +237,7 @@ function updateAuthButton() {
     authBtn.style.display = 'none';
     navAvatarBtn.style.display = 'block';
     const name = currentUser.user_metadata?.name || currentUser.email?.split('@')[0] || 'User';
-    const avatarUrl = currentUser.user_metadata?.avatar || `https://ui-avatars.com/api/?name=${name}&background=00ffcc&color=0b0d10&bold=true`;
+    const avatarUrl = currentUser.user_metadata?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=00ffcc&color=0b0d10&bold=true`;
     navAvatarBtn.src = avatarUrl;
   } else {
     authBtn.style.display = 'block';
@@ -234,16 +259,13 @@ toggleAuthLink?.addEventListener('click', (e) => {
   setAuthMode(!isRegisterMode);
 });
 
-// Кнопка Enter уже работает внутри input из-за тега <form> и type="submit", 
-// здесь мы только перехватываем сам ивент отправки для красивых уведомлений.
 authForm?.addEventListener('submit', async (e) => {
   e.preventDefault();
-  authErrorMsg.style.display = 'none'; // сброс ошибки перед запросом
+  authErrorMsg.style.display = 'none';
   
   const email = authEmailInput.value.trim();
   const password = authPasswordInput.value;
 
-  // Кастомная красивая валидация, заменяющая дефолтное окно браузера
   if (!email || !email.includes('@') || !email.includes('.')) {
     showNotification('Пожалуйста, введите корректный email-адрес', 'error');
     authEmailInput.focus();
@@ -313,6 +335,7 @@ async function updateUserUI() {
   const { data: { user } } = await supabaseClient.auth.getUser();
   currentUser = user;
   updateAuthButton();
+  if (user) addStoredAccount(user);
 }
 
 // =======================================================================
@@ -323,6 +346,8 @@ const profileLogoutBtn = document.getElementById('profileLogoutBtn');
 const accSwitchBtn = document.getElementById('accSwitchBtn');
 const accSwitchMenu = document.getElementById('accSwitchMenu');
 const accSwitchIcon = document.getElementById('accSwitchIcon');
+const accDropdownList = document.getElementById('accDropdownList');
+const addAccountBtn = document.getElementById('addAccountBtn');
 
 async function loadProfileStats() {
   if (!currentUser) return;
@@ -355,47 +380,146 @@ async function loadProfileStats() {
   }
 }
 
+function renderAccountsDropdown() {
+  if (!accDropdownList) return;
+  const accs = getStoredAccounts();
+  if (!currentUser) {
+    accDropdownList.innerHTML = '<div class="acc-dropdown-empty">Войдите в аккаунт</div>';
+    return;
+  }
+
+  const otherAccs = accs.filter(a => a.id !== currentUser.id);
+
+  let html = '';
+  // Текущий аккаунт
+  const curName = currentUser.user_metadata?.name || currentUser.email?.split('@')[0] || 'Пользователь';
+  const curAvatar = currentUser.user_metadata?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(curName)}&background=00ffcc&color=0b0d10&bold=true`;
+  html += `
+    <button class="acc-dropdown-item active-account" data-acc-id="${currentUser.id}">
+      <img src="${curAvatar}" alt="">
+      <div class="acc-item-info">
+        <span class="acc-item-name">${curName}</span>
+        <span class="acc-item-email">${currentUser.email}</span>
+      </div>
+      <i data-lucide="check" style="width:18px;height:18px;color:var(--accent-color);flex-shrink:0;"></i>
+    </button>
+  `;
+
+  // Остальные аккаунты
+  otherAccs.forEach(a => {
+    const avatar = a.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(a.name)}&background=00ffcc&color=0b0d10&bold=true`;
+    html += `
+      <button class="acc-dropdown-item" data-acc-id="${a.id}">
+        <img src="${avatar}" alt="">
+        <div class="acc-item-info">
+          <span class="acc-item-name">${a.name}</span>
+          <span class="acc-item-email">${a.email}</span>
+        </div>
+        <button class="acc-remove-btn" data-remove-id="${a.id}" style="background:none;border:none;color:#ff4d4d;cursor:pointer;padding:4px;display:flex;align-items:center;" title="Убрать">
+          <i data-lucide="x" style="width:16px;height:16px;"></i>
+        </button>
+      </button>
+    `;
+  });
+
+  accDropdownList.innerHTML = html;
+  if (window.lucide) lucide.createIcons();
+
+  // Клик по аккаунту — переключение
+  accDropdownList.querySelectorAll('.acc-dropdown-item').forEach(item => {
+    item.addEventListener('click', async (e) => {
+      if (e.target.closest('.acc-remove-btn')) return;
+      const accId = item.dataset.accId;
+      if (accId === currentUser.id) return; // уже на нём
+      const acc = accs.find(a => a.id === accId);
+      if (!acc) return;
+      // Для демо: просто показываем уведомление (нужны креды для входа)
+      showNotification(`Войдите в аккаунт ${acc.email}`, 'error');
+      // Закрываем меню профиля
+      userProfileModal.classList.remove('active');
+      closeAccDropdown();
+      // Открываем окно входа с подставленным email
+      setAuthMode(false);
+      openAuthModal();
+      if (authEmailInput) authEmailInput.value = acc.email;
+    });
+  });
+
+  // Удаление аккаунта из списка
+  accDropdownList.querySelectorAll('.acc-remove-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const removeId = btn.dataset.removeId;
+      removeStoredAccount(removeId);
+      renderAccountsDropdown();
+      showNotification('Аккаунт убран из списка');
+    });
+  });
+}
+
+function openAccDropdown() {
+  renderAccountsDropdown();
+  accSwitchMenu.classList.add('open');
+  if (accSwitchIcon) accSwitchIcon.style.transform = 'rotate(180deg)';
+}
+function closeAccDropdown() {
+  accSwitchMenu?.classList.remove('open');
+  if (accSwitchIcon) accSwitchIcon.style.transform = 'rotate(0deg)';
+}
+
 navAvatarBtn?.addEventListener('click', () => {
+  if (!currentUser) return;
   const name = currentUser.user_metadata?.name || currentUser.email?.split('@')[0] || 'Пользователь';
-  const avatarUrl = currentUser.user_metadata?.avatar || `https://ui-avatars.com/api/?name=${name}&background=00ffcc&color=0b0d10&bold=true`;
+  const avatarUrl = currentUser.user_metadata?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=00ffcc&color=0b0d10&bold=true`;
   
   document.getElementById('profileModalName').textContent = name;
   document.getElementById('profileModalEmail').textContent = currentUser.email;
   document.getElementById('profileModalAvatar').src = avatarUrl;
 
-  // Показываем окно сразу (без задержки)
   userProfileModal.classList.add('active');
+  closeAccDropdown();
   if (window.lucide) lucide.createIcons();
 
-  // Асинхронно грузим стату
   loadProfileStats();
 });
 
 document.getElementById('userProfileClose')?.addEventListener('click', () => {
   userProfileModal.classList.remove('active');
-  accSwitchMenu?.classList.remove('expanded');
-  accSwitchIcon.style.transform = 'rotate(0deg)';
+  closeAccDropdown();
 });
 document.getElementById('userProfileBackdrop')?.addEventListener('click', () => {
   userProfileModal.classList.remove('active');
-  accSwitchMenu?.classList.remove('expanded');
-  accSwitchIcon.style.transform = 'rotate(0deg)';
+  closeAccDropdown();
 });
 
-// Inline раскрытие мультиаккаунтов
-accSwitchBtn?.addEventListener('click', () => {
-  const isExpanded = accSwitchMenu.classList.contains('expanded');
-  if (isExpanded) {
-    accSwitchMenu.classList.remove('expanded');
-    accSwitchIcon.style.transform = 'rotate(0deg)';
+// Кнопка-капсула "Мои аккаунты" — открывает выпадающее меню
+accSwitchBtn?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (accSwitchMenu.classList.contains('open')) {
+    closeAccDropdown();
   } else {
-    accSwitchMenu.classList.add('expanded');
-    accSwitchIcon.style.transform = 'rotate(180deg)';
+    openAccDropdown();
   }
+});
+
+// Закрытие меню по клику вне его
+document.addEventListener('click', (e) => {
+  if (!accSwitchMenu?.classList.contains('open')) return;
+  if (!e.target.closest('.account-switch-wrapper')) {
+    closeAccDropdown();
+  }
+});
+
+addAccountBtn?.addEventListener('click', () => {
+  userProfileModal.classList.remove('active');
+  closeAccDropdown();
+  setAuthMode(true);
+  openAuthModal();
 });
 
 profileLogoutBtn?.addEventListener('click', () => {
   userProfileModal.classList.remove('active');
+  closeAccDropdown();
   signOut();
 });
 
@@ -408,7 +532,6 @@ const applyCropBtn = document.getElementById('applyCropBtn');
 const cropZoom = document.getElementById('cropZoom');
 let currentUploadImage = null;
 
-// Переменные для перетаскивания (смещения фото)
 let cropOffsetX = 0;
 let cropOffsetY = 0;
 let isDraggingCrop = false;
@@ -427,7 +550,7 @@ avatarUpload?.addEventListener('change', (e) => {
       currentUploadImage = new Image();
       currentUploadImage.onload = () => {
         cropZoom.value = 1; 
-        cropOffsetX = 0; // Сброс смещения
+        cropOffsetX = 0;
         cropOffsetY = 0;
         cropModal.classList.add('active');
         drawCrop();
@@ -438,7 +561,6 @@ avatarUpload?.addEventListener('change', (e) => {
   }
 });
 
-// Обработчики таскания (drag)
 function handleDragStart(x, y) {
   isDraggingCrop = true;
   startDragX = x - cropOffsetX;
@@ -454,19 +576,16 @@ function handleDragEnd() {
   isDraggingCrop = false;
 }
 
-// Мышь
 cropCanvas?.addEventListener('mousedown', (e) => handleDragStart(e.clientX, e.clientY));
 cropCanvas?.addEventListener('mousemove', (e) => handleDragMove(e.clientX, e.clientY));
 window.addEventListener('mouseup', handleDragEnd);
 
-// Тачи (телефоны)
 cropCanvas?.addEventListener('touchstart', (e) => handleDragStart(e.touches[0].clientX, e.touches[0].clientY));
 cropCanvas?.addEventListener('touchmove', (e) => {
-  e.preventDefault(); // запрещаем скролл страницы при таскании фото
+  e.preventDefault();
   handleDragMove(e.touches[0].clientX, e.touches[0].clientY);
 });
 window.addEventListener('touchend', handleDragEnd);
-
 
 function drawCrop() {
   if (!currentUploadImage || !ctx) return;
@@ -478,7 +597,6 @@ function drawCrop() {
   const scaledWidth = currentUploadImage.width * zoom;
   const scaledHeight = currentUploadImage.height * zoom;
   
-  // Учитываем смещение cropOffsetX/Y
   const dx = (size - scaledWidth) / 2 + cropOffsetX;
   const dy = (size - scaledHeight) / 2 + cropOffsetY;
 
@@ -508,6 +626,14 @@ applyCropBtn?.addEventListener('click', async () => {
     showNotification("Аватар успешно обновлён!");
     currentUser = data.user;
     updateAuthButton();
+    // Обновляем аватар в списке аккаунтов
+    addStoredAccount(currentUser);
+    const accs = getStoredAccounts();
+    const idx = accs.findIndex(a => a.id === currentUser.id);
+    if (idx >= 0) {
+      accs[idx].avatar = base64Avatar;
+      saveStoredAccounts(accs);
+    }
     document.getElementById('profileModalAvatar').src = base64Avatar;
     cropModal.classList.remove('active');
   } catch (err) {
@@ -517,7 +643,6 @@ applyCropBtn?.addEventListener('click', async () => {
     avatarUpload.value = '';
   }
 });
-
 
 // =======================================================================
 // КОММЕНТАРИИ
