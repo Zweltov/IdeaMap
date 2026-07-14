@@ -8,8 +8,8 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
-  <link rel="stylesheet" href="style.css" />
-  <link rel="stylesheet" href="profile.css" />
+  <link rel="stylesheet" href="/src/styles/style.css" />
+  <link rel="stylesheet" href="/src/styles/profile.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="bg-match">
@@ -57,20 +57,69 @@
     <section id="match-tab" class="tab-content active-tab">
       <section class="hero-section">
         <h1 class="hero-title">Умная <span>подборка</span> идей</h1>
-        <p class="hero-subtitle">Укажите ваш бюджет, свободное время и навыки, а наш алгоритм мгновенно подберет жизнеспособные бизнес-модели.</p>
-        
-        <div class="catalog-container" style="max-width: 650px; margin: 0 auto;">
-          <div class="glass-card" style="min-height: auto; padding: 2rem; text-align: center; opacity: 0.8;">
-            <i data-lucide="sparkles" style="width: 40px; height: 40px; color: var(--accent-color); margin-bottom: 1rem;"></i>
-            <h3 style="margin-bottom: 0.5rem; font-size: 1.3rem;">Конструктор умного поиска</h3>
-            <p style="font-size: 0.95rem; opacity: 0.7; margin-bottom: 1.5rem;">Интерфейс калькулятора бюджета, времени и сложности стартапа.</p>
-            <div class="filter-pills" style="justify-content: center;">
-              <button class="filter-pill">До 50 000 ₽</button>
-              <button class="filter-pill">До 200 000 ₽</button>
-              <button class="filter-pill">1-2 часа в день</button>
+        <p class="hero-subtitle">Укажите параметры — мы найдём бизнес-идеи, которые подходят именно вам.</p>
+
+        <div class="selection-builder">
+          <div class="selection-group">
+            <label class="selection-label">Бюджет</label>
+            <div class="selection-capsule" data-filter="budget">
+              <button class="selection-option active" data-value="0">Любой</button>
+              <button class="selection-option" data-value="10000">до 10к</button>
+              <button class="selection-option" data-value="30000">до 30к</button>
+              <button class="selection-option" data-value="50000">до 50к</button>
+              <button class="selection-option" data-value="100000">до 100к</button>
+              <button class="selection-option" data-value="200000">до 200к</button>
             </div>
           </div>
+
+          <div class="selection-group">
+            <label class="selection-label">Сложность</label>
+            <div class="selection-capsule" data-filter="complexity">
+              <button class="selection-option active" data-value="all">Любая</button>
+              <button class="selection-option" data-value="Низкая">Низкая</button>
+              <button class="selection-option" data-value="Средняя">Средняя</button>
+              <button class="selection-option" data-value="Высокая">Высокая</button>
+            </div>
+          </div>
+
+          <div class="selection-group">
+            <label class="selection-label">Риски</label>
+            <div class="selection-capsule" data-filter="risk">
+              <button class="selection-option active" data-value="all">Любые</button>
+              <button class="selection-option" data-value="Низкий">Низкие</button>
+              <button class="selection-option" data-value="Средний">Средние</button>
+              <button class="selection-option" data-value="Высокий">Высокие</button>
+            </div>
+          </div>
+
+          <div class="selection-group">
+            <label class="selection-label">Рейтинг</label>
+            <div class="selection-capsule" data-filter="rating">
+              <button class="selection-option active" data-value="0">Любой</button>
+              <button class="selection-option" data-value="3.5">3.5+</button>
+              <button class="selection-option" data-value="4.0">4.0+</button>
+              <button class="selection-option" data-value="4.5">4.5+</button>
+            </div>
+          </div>
+
+          <div class="selection-group">
+            <label class="selection-label">Минимум апвоутов</label>
+            <div class="selection-capsule" data-filter="upvotes">
+              <button class="selection-option active" data-value="0">0</button>
+              <button class="selection-option" data-value="5">5</button>
+              <button class="selection-option" data-value="10">10</button>
+              <button class="selection-option" data-value="25">25</button>
+              <button class="selection-option" data-value="50">50</button>
+            </div>
+          </div>
+
+          <button class="btn-glow selection-search-btn" id="selectionSearchBtn">
+            <i data-lucide="search"></i>
+            <span>Искать</span>
+          </button>
         </div>
+
+        <div class="selection-results" id="selectionResults"></div>
       </section>
     </section>
     
@@ -79,11 +128,11 @@
         <aside class="sidebar-glass" id="ideasSidebar">
           <div class="sidebar-tabs" id="sidebarTabs">
             <div class="sidebar-indicator" id="sidebarIndicator"></div>
-            <button class="sidebar-tab active" data-side-tab="all">
-              <i data-lucide="layers"></i><span>Все</span>
+            <button class="sidebar-tab active" data-side-tab="all" title="Все">
+              <i data-lucide="layers"></i>
             </button>
-            <button class="sidebar-tab" data-side-tab="top">
-              <i data-lucide="flame"></i><span>Топ</span>
+            <button class="sidebar-tab" data-side-tab="top" title="Топ">
+              <i data-lucide="flame"></i>
             </button>
           </div>
         </aside>
@@ -114,6 +163,8 @@
                   <button class="filter-pill" data-category="Еда">Еда</button>
                   <button class="filter-pill" data-category="Услуги">Услуги</button>
                   <button class="filter-pill" data-category="Онлайн-бизнес">Онлайн-бизнес</button>
+                  <button class="filter-pill" data-category="Производство">Производство</button>
+                  <button class="filter-pill" data-category="Недвижимость">Недвижимость</button>
                 </div>
               </div>
             </div>
@@ -157,18 +208,21 @@
       <form id="authForm" novalidate>
         <div id="authErrorMsg" class="auth-error-msg"></div>
         <div class="input-group">
-          <label>Email</label>
-          <input type="email" id="authEmail" required placeholder="example@mail.com">
+          <label>Имя пользователя</label>
+          <input type="text" id="authUsername" required placeholder="ivan_ivanov">
         </div>
         <div class="input-group">
           <label>Пароль</label>
           <input type="password" id="authPassword" required placeholder="••••••••">
         </div>
         <div class="input-group" id="nameFieldGroup" style="display: none;">
-          <label>Ваше имя (для регистрации)</label>
+          <label>Отображаемое имя (для регистрации)</label>
           <input type="text" id="authName" placeholder="Иван Иванов">
         </div>
-        <button type="submit" class="btn-glow btn-submit" id="submitAuthBtn">Войти</button>
+        <button type="submit" class="btn-glow btn-submit" id="submitAuthBtn">
+          <span class="btn-submit-text">Войти</span>
+          <span class="btn-submit-spinner"></span>
+        </button>
       </form>
       
       <p style="margin-top: 1.5rem; font-size: 0.9rem; color: var(--nav-text);">
@@ -302,6 +356,13 @@
                 </div>
                 <div class="settings-row">
                    <div class="settings-row-info">
+                      <span>Имя пользователя</span>
+                      <small>Используется для входа вместо email</small>
+                   </div>
+                   <input type="text" id="settingsUsernameInput" placeholder="ivan_ivanov" class="settings-input">
+                </div>
+                <div class="settings-row">
+                   <div class="settings-row-info">
                       <span>Email</span>
                       <small>Адрес электронной почты</small>
                    </div>
@@ -351,6 +412,23 @@
                       <div class="color-picker-row">
                          <input type="color" id="customInterfaceColor" value="#14181e">
                          <input type="text" id="customInterfaceText" value="#14181e" class="settings-input color-text-input">
+                      </div>
+                   </div>
+                   <div class="theme-mode-toggle-wrapper">
+                      <div class="theme-mode-toggle-labels">
+                         <span id="themeModeLabelDark" class="active"><i data-lucide="moon"></i> Тёмная</span>
+                         <span id="themeModeLabelLight"><i data-lucide="sun"></i> Светлая</span>
+                      </div>
+                      <div class="theme-mode-toggle">
+                         <div class="theme-mode-toggle-tabs">
+                            <div class="theme-mode-indicator" id="themeModeIndicator"></div>
+                            <button class="theme-mode-tab active" data-theme-mode="dark">
+                              <i data-lucide="moon"></i><span>Тёмлая</span>
+                            </button>
+                            <button class="theme-mode-tab" data-theme-mode="light">
+                              <i data-lucide="sun"></i><span>Светлая</span>
+                            </button>
+                         </div>
                       </div>
                    </div>
                    <div class="custom-theme-field">
@@ -428,6 +506,31 @@
      </div>
   </div>
 
-  <script src="script.js" defer></script>
+  <button class="saved-panel-trigger" id="savedPanelTrigger" title="Избранное и апвоуты">
+    <i data-lucide="bookmark"></i>
+    <span>Мои идеи</span>
+  </button>
+
+  <div id="savedPanelOverlay" class="saved-panel-overlay">
+    <div class="saved-panel-backdrop" id="savedPanelBackdrop"></div>
+    <div class="saved-panel">
+      <div class="saved-panel-header">
+        <h3>Мои идеи</h3>
+        <button class="saved-panel-close" id="savedPanelClose"><i data-lucide="x"></i></button>
+      </div>
+      <div class="saved-panel-nav-wrapper">
+        <div class="saved-panel-nav">
+          <div class="saved-panel-tabs" id="savedPanelTabs">
+            <div class="saved-panel-indicator" id="savedPanelIndicator"></div>
+            <button class="saved-panel-tab active" data-saved-tab="favorites"><i data-lucide="bookmark"></i><span>Избранное</span></button>
+            <button class="saved-panel-tab" data-saved-tab="upvotes"><i data-lucide="arrow-up"></i><span>Апвоуты</span></button>
+          </div>
+        </div>
+      </div>
+      <div class="saved-panel-content" id="savedPanelContent"></div>
+    </div>
+  </div>
+
+  <script src="/src/scripts/script.js" defer></script>
 </body>
 </html>
