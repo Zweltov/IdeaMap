@@ -31,6 +31,7 @@ const ideas = [
 let favorites = JSON.parse(localStorage.getItem('ideahub_favs')) || [];
 let likes = JSON.parse(localStorage.getItem('ideahub_likes')) || {};
 let currentCategory = 'all';
+let currentSidebarTab = 'all';
 let searchTerm = '';
 let currentUser = null;
 let currentIdeaComments = [];
@@ -39,7 +40,7 @@ let currentCardElement = null;
 let isRegisterMode = false;
 let articles = [];
 
-// ===== ХРАНИЛИЩЕ АККАУНТОВ (мультиаккаунт) =====
+// ===== ХРАНИЛИЩЕ АККАУНТОВ =====
 function getStoredAccounts() {
   return JSON.parse(localStorage.getItem('ideahub_accounts')) || [];
 }
@@ -48,11 +49,9 @@ function saveStoredAccounts(accs) {
 }
 function addStoredAccount(user) {
   const accs = getStoredAccounts();
-  const exists = accs.find(a => a.id === user.id);
-  if (!exists) {
+  if (!accs.find(a => a.id === user.id)) {
     accs.push({
-      id: user.id,
-      email: user.email,
+      id: user.id, email: user.email,
       name: user.user_metadata?.name || user.email?.split('@')[0] || 'Пользователь',
       avatar: user.user_metadata?.avatar || ''
     });
@@ -60,21 +59,147 @@ function addStoredAccount(user) {
   }
 }
 function removeStoredAccount(userId) {
-  const accs = getStoredAccounts().filter(a => a.id !== userId);
-  saveStoredAccounts(accs);
+  saveStoredAccounts(getStoredAccounts().filter(a => a.id !== userId));
 }
 
-// ===== КРАСИВЫЕ УВЕДОМЛЕНИЯ (TOASTS) =====
+// ===== ТЕМЫ ОФОРМЛЕНИЯ =====
+const presetThemes = [
+  { id: 'default', name: 'Тёмная (по умолчанию)', bg: '#0b0d10', accent: '#00ffcc', interface: '#14181e', isDark: true },
+  { id: 'midnight', name: 'Полночь', bg: '#0a0a1a', accent: '#6366f1', interface: '#12121f', isDark: true },
+  { id: 'forest', name: 'Лес', bg: '#0a1410', accent: '#22c55e', interface: '#0f1f18', isDark: true },
+  { id: 'sunset', name: 'Закат', bg: '#1a0a0f', accent: '#f97316', interface: '#1f1015', isDark: true },
+  { id: 'ocean', name: 'Океан', bg: '#0a1015', accent: '#0ea5e9', interface: '#0f1820', isDark: true },
+  { id: 'rose', name: 'Роза', bg: '#150a10', accent: '#f43f5e', interface: '#1c0f15', isDark: true },
+  { id: 'light', name: 'Светлая', bg: '#f5f5f7', accent: '#00a896', interface: '#ffffff', isDark: false },
+  { id: 'light-blue', name: 'Светлая голубая', bg: '#f0f5ff', accent: '#2563eb', interface: '#ffffff', isDark: false },
+  { id: 'light-warm', name: 'Светлая тёплая', bg: '#fff8f0', accent: '#ea580c', interface: '#ffffff', isDark: false },
+];
+
+function getCustomThemes() {
+  return JSON.parse(localStorage.getItem('ideahub_custom_themes')) || [];
+}
+function saveCustomThemes(themes) {
+  localStorage.setItem('ideahub_custom_themes', JSON.stringify(themes));
+}
+
+function getCurrentTheme() {
+  const id = localStorage.getItem('ideahub_active_theme') || 'default';
+  const all = [...presetThemes, ...getCustomThemes()];
+  return all.find(t => t.id === id) || presetThemes[0];
+}
+
+function applyTheme(theme) {
+  const root = document.documentElement;
+  root.style.setProperty('--bg-color', theme.bg);
+  root.style.setProperty('--accent-color', theme.accent);
+  root.style.setProperty('--interface-color', theme.interface);
+  root.style.setProperty('--modal-bg', theme.isDark
+    ? `${theme.interface}d9`
+    : `${theme.interface}f0`);
+  root.style.setProperty('--card-bg', theme.isDark
+    ? 'rgba(255,255,255,0.03)'
+    : 'rgba(0,0,0,0.04)');
+  root.style.setProperty('--card-border', theme.isDark
+    ? 'rgba(255,255,255,0.05)'
+    : 'rgba(0,0,0,0.08)');
+  root.style.setProperty('--nav-bg', theme.isDark
+    ? 'rgba(255,255,255,0.03)'
+    : 'rgba(0,0,0,0.04)');
+  root.style.setProperty('--nav-border', theme.isDark
+    ? 'rgba(255,255,255,0.08)'
+    : 'rgba(0,0,0,0.1)');
+  root.style.setProperty('--nav-text', theme.isDark
+    ? 'rgba(255,255,255,0.6)'
+    : 'rgba(0,0,0,0.5)');
+  root.style.setProperty('--text-color', theme.isDark ? '#f0f2f5' : '#1a1a2e');
+
+  // Орбы фона — цвета на основе акцента и фона темы
+  root.style.setProperty('--orb1-color', theme.isDark ? shiftColor(theme.accent, -40) : shiftColor(theme.accent, 20));
+  root.style.setProperty('--orb2-color', theme.accent);
+  root.style.setProperty('--orb3-color', theme.isDark ? shiftColor(theme.interface, 30) : shiftColor(theme.accent, -20));
+  root.style.setProperty('--orb1-opacity', theme.isDark ? '0.22' : '0.15');
+  root.style.setProperty('--orb2-opacity', theme.isDark ? '0.22' : '0.12');
+  root.style.setProperty('--orb3-opacity', theme.isDark ? '0.20' : '0.10');
+
+  localStorage.setItem('ideahub_active_theme', theme.id);
+}
+
+function shiftColor(hex, amount) {
+  let r = parseInt(hex.slice(1,3), 16) + amount;
+  let g = parseInt(hex.slice(3,5), 16) + amount;
+  let b = parseInt(hex.slice(5,7), 16) + amount;
+  r = Math.max(0, Math.min(255, r));
+  g = Math.max(0, Math.min(255, g));
+  b = Math.max(0, Math.min(255, b));
+  return '#' + [r,g,b].map(v => v.toString(16).padStart(2,'0')).join('');
+}
+
+function renderThemes() {
+  const grid = document.getElementById('themeGrid');
+  if (!grid) return;
+  const currentId = localStorage.getItem('ideahub_active_theme') || 'default';
+  const custom = getCustomThemes();
+  const all = [...presetThemes, ...custom];
+
+  grid.innerHTML = all.map(t => {
+    const isActive = t.id === currentId;
+    const isCustom = custom.find(c => c.id === t.id);
+    const textColor = t.isDark ? '#f0f2f5' : '#1a1a2e';
+    const subText = t.isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)';
+    return `
+      <div class="theme-card ${isActive ? 'active' : ''}" data-theme-id="${t.id}">
+        ${isCustom ? `<button class="theme-delete-btn" data-delete-theme="${t.id}"><i data-lucide="x" style="width:12px;height:12px;"></i></button>` : ''}
+        <div class="theme-check"><i data-lucide="check" style="width:14px;height:14px;"></i></div>
+        <div class="theme-preview" style="background:${t.bg}; color:${textColor};">
+          <div class="theme-preview-accent-dot" style="background:${t.accent};"></div>
+          <div class="theme-preview-bg" style="background:${t.interface};">
+            <div class="theme-preview-mini-nav" style="background:${t.accent}; opacity:0.3;"></div>
+            <div class="theme-preview-mini-card" style="background:${textColor}; opacity:0.15;"></div>
+            <div class="theme-preview-mini-card" style="background:${textColor}; opacity:0.1; width:50%;"></div>
+          </div>
+          <div class="theme-name" style="color:${textColor};">${t.name}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  if (window.lucide) lucide.createIcons();
+
+  grid.querySelectorAll('.theme-card').forEach(card => {
+    card.addEventListener('click', (e) => {
+      if (e.target.closest('.theme-delete-btn')) return;
+      const id = card.dataset.themeId;
+      const theme = all.find(t => t.id === id);
+      if (theme) {
+        applyTheme(theme);
+        renderThemes();
+        showNotification(`Тема "${theme.name}" применена`);
+      }
+    });
+  });
+
+  grid.querySelectorAll('.theme-delete-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.deleteTheme;
+      saveCustomThemes(getCustomThemes().filter(t => t.id !== id));
+      if (localStorage.getItem('ideahub_active_theme') === id) {
+        applyTheme(presetThemes[0]);
+      }
+      renderThemes();
+      showNotification('Тема удалена');
+    });
+  });
+}
+
+// ===== УВЕДОМЛЕНИЯ =====
 function showNotification(message, type = 'success', duration = 3000) {
   const container = document.getElementById('toastContainer');
   if (!container) return;
-  
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
-  
   let iconName = type === 'error' ? 'alert-circle' : 'check-circle';
   let iconColor = type === 'error' ? '#ff4d4d' : 'var(--accent-color)';
-
   toast.innerHTML = `
     <i data-lucide="${iconName}" style="color: ${iconColor};"></i>
     <div class="toast-content">${message}</div>
@@ -82,36 +207,23 @@ function showNotification(message, type = 'success', duration = 3000) {
     <div class="toast-progress" style="animation-duration: ${duration}ms;"></div>
   `;
   container.appendChild(toast);
-  
   if(window.lucide) lucide.createIcons({root: toast});
-
   setTimeout(() => toast.classList.add('show'), 10);
-
   let timeout = setTimeout(() => closeToast(toast), duration);
-
-  const closeBtn = toast.querySelector('.toast-close');
-  closeBtn.onclick = () => {
-      clearTimeout(timeout);
-      closeToast(toast);
-  };
+  toast.querySelector('.toast-close').onclick = () => { clearTimeout(timeout); closeToast(toast); };
 }
-
-function closeToast(toast) {
-  toast.classList.remove('show');
-  setTimeout(() => toast.remove(), 400);
-}
+function closeToast(toast) { toast.classList.remove('show'); setTimeout(() => toast.remove(), 400); }
 
 function translateError(msg) {
-  const translations = {
+  const t = {
     "Invalid login credentials": "Неверный логин или пароль",
     "Email not confirmed": "Подтвердите электронную почту",
     "User already registered": "Пользователь с таким email уже существует",
     "Password should be at least 6 characters": "Пароль должен быть не менее 6 символов"
   };
-  return translations[msg] || msg;
+  return t[msg] || msg;
 }
 
-// ===== ТРЕКИНГ ПРОСМОТРОВ =====
 function recordView(type) {
   if (!currentUser) return;
   const key = `ideahub_views_${currentUser.id}`;
@@ -121,38 +233,30 @@ function recordView(type) {
 }
 
 // =======================================================================
-// ВКЛАДКИ ВЕРХНЕЙ ПАНЕЛИ — мягкая капсула, слабый блик по направлению
+// ВКЛАДКИ ВЕРХНЕЙ ПАНЕЛИ
 // =======================================================================
 const navTabs = document.querySelectorAll('.nav-tab');
 const navIndicator = document.getElementById('navIndicator');
 const tabContents = document.querySelectorAll('.tab-content');
-
 let lastIndicatorX = 0;
 
 function moveIndicator(tabEl) {
   if (!tabEl || !navIndicator) return;
-  
   const isInitial = navIndicator.style.width === '0px' || !navIndicator.style.width;
-  
   if (!isInitial) {
     const targetX = tabEl.offsetLeft;
     const direction = targetX > lastIndicatorX ? 1 : -1;
-
     navIndicator.classList.add('is-moving');
-    // Направление блика: data-attr, CSS читает его
     navIndicator.dataset.dir = direction > 0 ? '1' : '-1';
-
-    // Лёгкое расширение — минимальное, чтобы капсула не выходила за пределы
     navIndicator.style.width = `${tabEl.offsetWidth + 4}px`;
     navIndicator.style.transform = `translateX(${tabEl.offsetLeft - 2}px)`;
-
     clearTimeout(navIndicator.moveTimeout);
     navIndicator.moveTimeout = setTimeout(() => {
-        navIndicator.style.width = `${tabEl.offsetWidth}px`;
-        navIndicator.style.transform = `translateX(${tabEl.offsetLeft}px)`;
-        navIndicator.classList.remove('is-moving');
-        lastIndicatorX = tabEl.offsetLeft;
-    }, 180); 
+      navIndicator.style.width = `${tabEl.offsetWidth}px`;
+      navIndicator.style.transform = `translateX(${tabEl.offsetLeft}px)`;
+      navIndicator.classList.remove('is-moving');
+      lastIndicatorX = tabEl.offsetLeft;
+    }, 180);
   } else {
     navIndicator.style.width = `${tabEl.offsetWidth}px`;
     navIndicator.style.transform = `translateX(${tabEl.offsetLeft}px)`;
@@ -162,27 +266,71 @@ function moveIndicator(tabEl) {
 
 function switchTab(tabName) {
   navTabs.forEach(t => t.classList.toggle('active', t.dataset.tab === tabName));
-  tabContents.forEach(c => {
-    c.style.display = c.id === `${tabName}-tab` ? '' : 'none';
-  });
+  tabContents.forEach(c => { c.style.display = c.id === `${tabName}-tab` ? '' : 'none'; });
   const activeTab = Array.from(navTabs).find(t => t.dataset.tab === tabName);
   moveIndicator(activeTab);
-
+  // Меняем фон в зависимости от вкладки
+  document.body.className = document.body.className.replace(/\bbg-\w+/g, '').trim();
+  document.body.classList.add(`bg-${tabName}`);
   if (tabName === 'articles') renderArticles();
-  if (tabName === 'ideas') renderCards();
+  if (tabName === 'ideas') { renderCards(); moveSidebarIndicator(); }
 }
 
-navTabs.forEach(tab => {
-  tab.addEventListener('click', () => switchTab(tab.dataset.tab));
-});
+navTabs.forEach(tab => tab.addEventListener('click', () => switchTab(tab.dataset.tab)));
 
 window.addEventListener('resize', () => {
   const active = document.querySelector('.nav-tab.active');
   if (active) moveIndicator(active);
+  moveSidebarIndicator();
+  moveSettingsIndicator();
 });
 
 // =======================================================================
-// АВТОРИЗАЦИЯ И UI ПОЛЬЗОВАТЕЛЯ
+// ВЕРТИКАЛЬНЫЙ САЙДБАР (ВКЛАДКА "ИДЕИ")
+// =======================================================================
+const sidebarTabs = document.querySelectorAll('.sidebar-tab');
+const sidebarIndicator = document.getElementById('sidebarIndicator');
+let lastSidebarY = 0;
+
+function moveSidebarIndicator(tabEl) {
+  if (!tabEl) {
+    tabEl = document.querySelector('.sidebar-tab.active');
+  }
+  if (!tabEl || !sidebarIndicator) return;
+  const isInitial = sidebarIndicator.style.height === '0px' || !sidebarIndicator.style.height;
+  if (!isInitial) {
+    const targetY = tabEl.offsetTop;
+    const direction = targetY > lastSidebarY ? 1 : -1;
+    sidebarIndicator.classList.add('is-moving');
+    sidebarIndicator.dataset.dir = direction > 0 ? '1' : '-1';
+    sidebarIndicator.style.height = `${tabEl.offsetHeight + 4}px`;
+    sidebarIndicator.style.transform = `translateY(${tabEl.offsetTop - 2}px)`;
+    clearTimeout(sidebarIndicator.moveTimeout);
+    sidebarIndicator.moveTimeout = setTimeout(() => {
+      sidebarIndicator.style.height = `${tabEl.offsetHeight}px`;
+      sidebarIndicator.style.transform = `translateY(${tabEl.offsetTop}px)`;
+      sidebarIndicator.classList.remove('is-moving');
+      lastSidebarY = tabEl.offsetTop;
+    }, 180);
+  } else {
+    sidebarIndicator.style.height = `${tabEl.offsetHeight}px`;
+    sidebarIndicator.style.transform = `translateY(${tabEl.offsetTop}px)`;
+    lastSidebarY = tabEl.offsetTop;
+  }
+}
+
+function switchSidebarTab(tabName) {
+  sidebarTabs.forEach(t => t.classList.toggle('active', t.dataset.sideTab === tabName));
+  currentSidebarTab = tabName;
+  const active = Array.from(sidebarTabs).find(t => t.dataset.sideTab === tabName);
+  moveSidebarIndicator(active);
+  renderCards();
+}
+
+sidebarTabs.forEach(tab => tab.addEventListener('click', () => switchSidebarTab(tab.dataset.sideTab)));
+
+// =======================================================================
+// АВТОРИЗАЦИЯ
 // =======================================================================
 const authModal = document.getElementById('authModal');
 const authBtn = document.getElementById('authBtn');
@@ -200,18 +348,11 @@ const submitAuthBtn = document.getElementById('submitAuthBtn');
 const toggleAuthText = document.getElementById('toggleAuthText');
 const toggleAuthLink = document.getElementById('toggleAuthLink');
 
-function openAuthModal() {
-  authErrorMsg.style.display = 'none';
-  authModal.classList.add('active');
-}
+function openAuthModal() { authErrorMsg.style.display = 'none'; authModal.classList.add('active'); }
 function closeAuthModal() {
   authModal.classList.remove('active');
-  setTimeout(() => {
-    authForm?.reset();
-    authErrorMsg.style.display = 'none';
-  }, 300);
+  setTimeout(() => { authForm?.reset(); authErrorMsg.style.display = 'none'; }, 300);
 }
-
 function setAuthMode(registerMode) {
   isRegisterMode = registerMode;
   authErrorMsg.style.display = 'none';
@@ -245,39 +386,22 @@ function updateAuthButton() {
   }
 }
 
-authBtn?.addEventListener('click', () => {
-  setAuthMode(false);
-  openAuthModal();
-});
-
+authBtn?.addEventListener('click', () => { setAuthMode(false); openAuthModal(); });
 closeAuthBtn?.addEventListener('click', closeAuthModal);
-authModal?.addEventListener('click', (e) => {
-  if (e.target === authModal) closeAuthModal();
-});
-toggleAuthLink?.addEventListener('click', (e) => {
-  e.preventDefault();
-  setAuthMode(!isRegisterMode);
-});
+authModal?.addEventListener('click', (e) => { if (e.target === authModal) closeAuthModal(); });
+toggleAuthLink?.addEventListener('click', (e) => { e.preventDefault(); setAuthMode(!isRegisterMode); });
 
 authForm?.addEventListener('submit', async (e) => {
   e.preventDefault();
   authErrorMsg.style.display = 'none';
-  
   const email = authEmailInput.value.trim();
   const password = authPasswordInput.value;
-
   if (!email || !email.includes('@') || !email.includes('.')) {
-    showNotification('Пожалуйста, введите корректный email-адрес', 'error');
-    authEmailInput.focus();
-    return;
+    showNotification('Пожалуйста, введите корректный email-адрес', 'error'); authEmailInput.focus(); return;
   }
-  
   if (!password || password.length < 6) {
-    showNotification('Пароль должен быть не менее 6 символов', 'error');
-    authPasswordInput.focus();
-    return;
+    showNotification('Пароль должен быть не менее 6 символов', 'error'); authPasswordInput.focus(); return;
   }
-
   if (isRegisterMode) {
     const name = authNameInput.value;
     const result = await signUp(email, password, name);
@@ -290,18 +414,11 @@ authForm?.addEventListener('submit', async (e) => {
 
 async function signUp(email, password, name) {
   try {
-    const { data, error } = await supabaseClient.auth.signUp({
-      email,
-      password,
-      options: { data: { name } }
-    });
+    const { data, error } = await supabaseClient.auth.signUp({ email, password, options: { data: { name } } });
     if (error) throw error;
     showNotification('Аккаунт создан! Проверьте почту для подтверждения.');
     return data;
-  } catch (error) {
-    showNotification(translateError(error.message), 'error');
-    return null;
-  }
+  } catch (error) { showNotification(translateError(error.message), 'error'); return null; }
 }
 
 async function signIn(email, password) {
@@ -309,26 +426,22 @@ async function signIn(email, password) {
     const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
     if (error) throw error;
     showNotification('Добро пожаловать!');
-    await updateUserUI();
-    renderCards();
+    await updateUserUI(); renderCards();
+    // Сохраняем refresh_token для быстрого переключения
+    if (data.session?.refresh_token && currentUser) {
+      localStorage.setItem(`ideahub_refresh_${currentUser.id}`, data.session.refresh_token);
+    }
     return data;
-  } catch (error) {
-    showNotification(translateError(error.message), 'error');
-    return null;
-  }
+  } catch (error) { showNotification(translateError(error.message), 'error'); return null; }
 }
 
 async function signOut() {
   try {
     const { error } = await supabaseClient.auth.signOut();
     if (error) throw error;
-    currentUser = null;
-    await updateUserUI();
-    renderCards();
+    currentUser = null; await updateUserUI(); renderCards();
     showNotification('Вы вышли из аккаунта');
-  } catch (error) {
-    showNotification(translateError(error.message), 'error');
-  }
+  } catch (error) { showNotification(translateError(error.message), 'error'); }
 }
 
 async function updateUserUI() {
@@ -339,7 +452,7 @@ async function updateUserUI() {
 }
 
 // =======================================================================
-// ПРОФИЛЬ (ОКНО И CROP АВАТАРКИ)
+// ПРОФИЛЬ
 // =======================================================================
 const userProfileModal = document.getElementById('userProfileModal');
 const profileLogoutBtn = document.getElementById('profileLogoutBtn');
@@ -348,182 +461,251 @@ const accSwitchMenu = document.getElementById('accSwitchMenu');
 const accSwitchIcon = document.getElementById('accSwitchIcon');
 const accDropdownList = document.getElementById('accDropdownList');
 const addAccountBtn = document.getElementById('addAccountBtn');
+const openSettingsBtn = document.getElementById('openSettingsBtn');
 
 async function loadProfileStats() {
   if (!currentUser) return;
-  
   const created = new Date(currentUser.created_at);
-  const diffTime = Math.abs(Date.now() - created);
-  const diffDays = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+  const diffDays = Math.max(1, Math.ceil(Math.abs(Date.now() - created) / (1000 * 60 * 60 * 24)));
   document.getElementById('statAge').textContent = `${diffDays} дн.`;
-
-  const viewsKey = `ideahub_views_${currentUser.id}`;
-  const views = JSON.parse(localStorage.getItem(viewsKey)) || { ideas: 0, articles: 0 };
+  const views = JSON.parse(localStorage.getItem(`ideahub_views_${currentUser.id}`)) || { ideas: 0, articles: 0 };
   document.getElementById('statIdeas').textContent = views.ideas;
   document.getElementById('statArticles').textContent = views.articles;
-
   try {
-    const { count: upvotesCount } = await supabaseClient
-      .from('likes')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', currentUser.id);
-    
-    const { count: commentsCount } = await supabaseClient
-      .from('comments')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', currentUser.id);
-
+    const { count: upvotesCount } = await supabaseClient.from('likes').select('*', { count: 'exact', head: true }).eq('user_id', currentUser.id);
+    const { count: commentsCount } = await supabaseClient.from('comments').select('*', { count: 'exact', head: true }).eq('user_id', currentUser.id);
     document.getElementById('statUpvotes').textContent = upvotesCount || 0;
     document.getElementById('statComments').textContent = commentsCount || 0;
-  } catch (err) {
-    console.error("Ошибка загрузки статистики БД:", err);
-  }
+  } catch (err) { console.error("Ошибка загрузки статистики БД:", err); }
 }
 
 function renderAccountsDropdown() {
   if (!accDropdownList) return;
   const accs = getStoredAccounts();
-  if (!currentUser) {
-    accDropdownList.innerHTML = '<div class="acc-dropdown-empty">Войдите в аккаунт</div>';
-    return;
-  }
-
+  if (!currentUser) { accDropdownList.innerHTML = '<div class="acc-dropdown-empty">Войдите в аккаунт</div>'; return; }
   const otherAccs = accs.filter(a => a.id !== currentUser.id);
-
   let html = '';
-  // Текущий аккаунт
   const curName = currentUser.user_metadata?.name || currentUser.email?.split('@')[0] || 'Пользователь';
   const curAvatar = currentUser.user_metadata?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(curName)}&background=00ffcc&color=0b0d10&bold=true`;
-  html += `
-    <button class="acc-dropdown-item active-account" data-acc-id="${currentUser.id}">
-      <img src="${curAvatar}" alt="">
-      <div class="acc-item-info">
-        <span class="acc-item-name">${curName}</span>
-        <span class="acc-item-email">${currentUser.email}</span>
-      </div>
-      <i data-lucide="check" style="width:18px;height:18px;color:var(--accent-color);flex-shrink:0;"></i>
-    </button>
-  `;
-
-  // Остальные аккаунты
+  html += `<button class="acc-dropdown-item active-account" data-acc-id="${currentUser.id}"><img src="${curAvatar}" alt=""><div class="acc-item-info"><span class="acc-item-name">${curName}</span><span class="acc-item-email">${currentUser.email}</span></div><i data-lucide="check" style="width:18px;height:18px;color:var(--accent-color);flex-shrink:0;"></i></button>`;
   otherAccs.forEach(a => {
     const avatar = a.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(a.name)}&background=00ffcc&color=0b0d10&bold=true`;
-    html += `
-      <button class="acc-dropdown-item" data-acc-id="${a.id}">
-        <img src="${avatar}" alt="">
-        <div class="acc-item-info">
-          <span class="acc-item-name">${a.name}</span>
-          <span class="acc-item-email">${a.email}</span>
-        </div>
-        <button class="acc-remove-btn" data-remove-id="${a.id}" style="background:none;border:none;color:#ff4d4d;cursor:pointer;padding:4px;display:flex;align-items:center;" title="Убрать">
-          <i data-lucide="x" style="width:16px;height:16px;"></i>
-        </button>
-      </button>
-    `;
+    html += `<button class="acc-dropdown-item" data-acc-id="${a.id}"><img src="${avatar}" alt=""><div class="acc-item-info"><span class="acc-item-name">${a.name}</span><span class="acc-item-email">${a.email}</span></div><button class="acc-remove-btn" data-remove-id="${a.id}" title="Убрать"><i data-lucide="x"></i></button></button>`;
   });
-
   accDropdownList.innerHTML = html;
   if (window.lucide) lucide.createIcons();
-
-  // Клик по аккаунту — переключение
   accDropdownList.querySelectorAll('.acc-dropdown-item').forEach(item => {
     item.addEventListener('click', async (e) => {
       if (e.target.closest('.acc-remove-btn')) return;
       const accId = item.dataset.accId;
-      if (accId === currentUser.id) return; // уже на нём
+      if (accId === currentUser.id) return;
       const acc = accs.find(a => a.id === accId);
       if (!acc) return;
-      // Для демо: просто показываем уведомление (нужны креды для входа)
-      showNotification(`Войдите в аккаунт ${acc.email}`, 'error');
-      // Закрываем меню профиля
-      userProfileModal.classList.remove('active');
-      closeAccDropdown();
-      // Открываем окно входа с подставленным email
-      setAuthMode(false);
-      openAuthModal();
-      if (authEmailInput) authEmailInput.value = acc.email;
+      // Быстрый переход: пробуем войти без пароля через сохранённую сессию
+      await quickSwitchAccount(acc);
     });
   });
-
-  // Удаление аккаунта из списка
   accDropdownList.querySelectorAll('.acc-remove-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
-      const removeId = btn.dataset.removeId;
-      removeStoredAccount(removeId);
+      removeStoredAccount(btn.dataset.removeId);
       renderAccountsDropdown();
       showNotification('Аккаунт убран из списка');
     });
   });
 }
 
-function openAccDropdown() {
-  renderAccountsDropdown();
-  accSwitchMenu.classList.add('open');
-  if (accSwitchIcon) accSwitchIcon.style.transform = 'rotate(180deg)';
-}
-function closeAccDropdown() {
-  accSwitchMenu?.classList.remove('open');
-  if (accSwitchIcon) accSwitchIcon.style.transform = 'rotate(0deg)';
+function openAccDropdown() { renderAccountsDropdown(); accSwitchMenu.classList.add('open'); if (accSwitchIcon) accSwitchIcon.style.transform = 'rotate(180deg)'; }
+function closeAccDropdown() { accSwitchMenu?.classList.remove('open'); if (accSwitchIcon) accSwitchIcon.style.transform = 'rotate(0deg)'; }
+
+async function quickSwitchAccount(acc) {
+  // Пробуем восстановить сессию через setSession с сохранённым refresh_token
+  const tokenKey = `ideahub_refresh_${acc.id}`;
+  const refreshToken = localStorage.getItem(tokenKey);
+  if (refreshToken) {
+    try {
+      const { data, error } = await supabaseClient.auth.setSession({ refresh_token: refreshToken });
+      if (!error && data.user) {
+        currentUser = data.user;
+        addStoredAccount(currentUser);
+        await updateUserUI();
+        await loadUserData();
+        renderCards();
+        showNotification(`Переключились на ${acc.name}`);
+        userProfileModal.classList.remove('active');
+        closeAccDropdown();
+        return;
+      }
+    } catch (e) { /* fall through to login */ }
+  }
+  // Нет сохранённой сессии — открываем окно входа с предзаполненным email
+  showNotification(`Войдите в аккаунт ${acc.email}`, 'error');
+  userProfileModal.classList.remove('active'); closeAccDropdown();
+  setAuthMode(false); openAuthModal();
+  if (authEmailInput) authEmailInput.value = acc.email;
 }
 
 navAvatarBtn?.addEventListener('click', () => {
   if (!currentUser) return;
   const name = currentUser.user_metadata?.name || currentUser.email?.split('@')[0] || 'Пользователь';
   const avatarUrl = currentUser.user_metadata?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=00ffcc&color=0b0d10&bold=true`;
-  
   document.getElementById('profileModalName').textContent = name;
   document.getElementById('profileModalEmail').textContent = currentUser.email;
   document.getElementById('profileModalAvatar').src = avatarUrl;
-
-  userProfileModal.classList.add('active');
-  closeAccDropdown();
+  userProfileModal.classList.add('active'); closeAccDropdown();
   if (window.lucide) lucide.createIcons();
-
   loadProfileStats();
 });
 
-document.getElementById('userProfileClose')?.addEventListener('click', () => {
-  userProfileModal.classList.remove('active');
-  closeAccDropdown();
-});
-document.getElementById('userProfileBackdrop')?.addEventListener('click', () => {
-  userProfileModal.classList.remove('active');
-  closeAccDropdown();
-});
+document.getElementById('userProfileClose')?.addEventListener('click', () => { userProfileModal.classList.remove('active'); closeAccDropdown(); });
+document.getElementById('userProfileBackdrop')?.addEventListener('click', () => { userProfileModal.classList.remove('active'); closeAccDropdown(); });
 
-// Кнопка-капсула "Мои аккаунты" — открывает выпадающее меню
 accSwitchBtn?.addEventListener('click', (e) => {
   e.stopPropagation();
-  if (accSwitchMenu.classList.contains('open')) {
-    closeAccDropdown();
-  } else {
-    openAccDropdown();
-  }
+  if (accSwitchMenu.classList.contains('open')) closeAccDropdown(); else openAccDropdown();
 });
 
-// Закрытие меню по клику вне его
 document.addEventListener('click', (e) => {
   if (!accSwitchMenu?.classList.contains('open')) return;
-  if (!e.target.closest('.account-switch-wrapper')) {
-    closeAccDropdown();
-  }
+  if (!e.target.closest('.account-switch-wrapper')) closeAccDropdown();
 });
 
 addAccountBtn?.addEventListener('click', () => {
-  userProfileModal.classList.remove('active');
-  closeAccDropdown();
-  setAuthMode(true);
-  openAuthModal();
+  userProfileModal.classList.remove('active'); closeAccDropdown();
+  setAuthMode(false); openAuthModal();
 });
 
 profileLogoutBtn?.addEventListener('click', () => {
-  userProfileModal.classList.remove('active');
-  closeAccDropdown();
-  signOut();
+  userProfileModal.classList.remove('active'); closeAccDropdown(); signOut();
 });
 
-// -- Логика обрезки фото --
+// =======================================================================
+// ОКНО НАСТРОЕК
+// =======================================================================
+const settingsModal = document.getElementById('settingsModal');
+const settingsCloseBtn = document.getElementById('settingsCloseBtn');
+const settingsBackdrop = document.getElementById('settingsBackdrop');
+const settingsTabs = document.querySelectorAll('[data-settings-tab]');
+const settingsIndicator = document.getElementById('settingsIndicator');
+let lastSettingsX = 0;
+
+function moveSettingsIndicator(tabEl) {
+  if (!tabEl || !settingsIndicator) return;
+  const isInitial = settingsIndicator.style.width === '0px' || !settingsIndicator.style.width;
+  if (!isInitial) {
+    const targetX = tabEl.offsetLeft;
+    const direction = targetX > lastSettingsX ? 1 : -1;
+    settingsIndicator.classList.add('is-moving');
+    settingsIndicator.dataset.dir = direction > 0 ? '1' : '-1';
+    settingsIndicator.style.width = `${tabEl.offsetWidth + 4}px`;
+    settingsIndicator.style.transform = `translateX(${tabEl.offsetLeft - 2}px)`;
+    clearTimeout(settingsIndicator.moveTimeout);
+    settingsIndicator.moveTimeout = setTimeout(() => {
+      settingsIndicator.style.width = `${tabEl.offsetWidth}px`;
+      settingsIndicator.style.transform = `translateX(${tabEl.offsetLeft}px)`;
+      settingsIndicator.classList.remove('is-moving');
+      lastSettingsX = tabEl.offsetLeft;
+    }, 180);
+  } else {
+    settingsIndicator.style.width = `${tabEl.offsetWidth}px`;
+    settingsIndicator.style.transform = `translateX(${tabEl.offsetLeft}px)`;
+    lastSettingsX = tabEl.offsetLeft;
+  }
+}
+
+function switchSettingsTab(tabName) {
+  settingsTabs.forEach(t => t.classList.toggle('active', t.dataset.settingsTab === tabName));
+  document.querySelectorAll('.settings-panel').forEach(p => {
+    p.style.display = p.id === `settings-${tabName}` ? 'block' : 'none';
+  });
+  const active = Array.from(settingsTabs).find(t => t.dataset.settingsTab === tabName);
+  moveSettingsIndicator(active);
+  if (tabName === 'personalization') renderThemes();
+}
+
+settingsTabs.forEach(tab => tab.addEventListener('click', () => switchSettingsTab(tab.dataset.settingsTab)));
+
+openSettingsBtn?.addEventListener('click', () => {
+  userProfileModal.classList.remove('active');
+  settingsModal.classList.add('active');
+  switchSettingsTab('general');
+  if (window.lucide) lucide.createIcons();
+  // Заполняем поля
+  if (currentUser) {
+    const name = currentUser.user_metadata?.name || '';
+    document.getElementById('settingsNameInput').value = name;
+    document.getElementById('settingsEmailInput').value = currentUser.email || '';
+  }
+});
+
+settingsCloseBtn?.addEventListener('click', () => settingsModal.classList.remove('active'));
+settingsBackdrop?.addEventListener('click', () => settingsModal.classList.remove('active'));
+
+// Save name
+document.getElementById('settingsNameInput')?.addEventListener('change', async (e) => {
+  if (!currentUser) return;
+  try {
+    const { data, error } = await supabaseClient.auth.updateUser({ data: { name: e.target.value } });
+    if (error) throw error;
+    currentUser = data.user;
+    updateAuthButton();
+    addStoredAccount(currentUser);
+    showNotification('Имя обновлено');
+  } catch (err) { showNotification('Ошибка обновления имени', 'error'); }
+});
+
+// Clear cache
+document.getElementById('clearCacheBtn')?.addEventListener('click', () => {
+  Object.keys(localStorage).forEach(k => {
+    if (k.startsWith('ideahub_views_')) localStorage.removeItem(k);
+  });
+  showNotification('Кэш очищен');
+});
+
+// Custom theme builder — sync color pickers with text inputs
+function syncColorPicker(pickerId, textId) {
+  const picker = document.getElementById(pickerId);
+  const text = document.getElementById(textId);
+  if (!picker || !text) return;
+  picker.addEventListener('input', () => text.value = picker.value);
+  text.addEventListener('input', () => {
+    if (/^#[0-9a-fA-F]{6}$/.test(text.value)) picker.value = text.value;
+  });
+}
+syncColorPicker('customBgColor', 'customBgText');
+syncColorPicker('customAccentColor', 'customAccentText');
+syncColorPicker('customInterfaceColor', 'customInterfaceText');
+
+document.getElementById('saveCustomThemeBtn')?.addEventListener('click', () => {
+  const bg = document.getElementById('customBgText').value;
+  const accent = document.getElementById('customAccentText').value;
+  const interfaceC = document.getElementById('customInterfaceText').value;
+  const name = document.getElementById('customThemeName').value.trim() || 'Своя тема';
+  if (!/^#[0-9a-fA-F]{6}$/.test(bg) || !/^#[0-9a-fA-F]{6}$/.test(accent) || !/^#[0-9a-fA-F]{6}$/.test(interfaceC)) {
+    showNotification('Неверный формат цвета', 'error'); return;
+  }
+  const isDark = !isLightColor(bg);
+  const id = 'custom_' + Date.now();
+  const theme = { id, name, bg, accent, interface: interfaceC, isDark };
+  const custom = getCustomThemes();
+  custom.push(theme);
+  saveCustomThemes(custom);
+  applyTheme(theme);
+  renderThemes();
+  showNotification(`Тема "${name}" сохранена и применена`);
+  document.getElementById('customThemeName').value = '';
+});
+
+function isLightColor(hex) {
+  const r = parseInt(hex.slice(1,3), 16);
+  const g = parseInt(hex.slice(3,5), 16);
+  const b = parseInt(hex.slice(5,7), 16);
+  return (r * 0.299 + g * 0.587 + b * 0.114) > 128;
+}
+
+// =======================================================================
+// CROP АВАТАРКИ
+// =======================================================================
 const cropModal = document.getElementById('cropModal');
 const avatarUpload = document.getElementById('avatarUpload');
 const cropCanvas = document.getElementById('cropCanvas');
@@ -531,16 +713,9 @@ const ctx = cropCanvas?.getContext('2d');
 const applyCropBtn = document.getElementById('applyCropBtn');
 const cropZoom = document.getElementById('cropZoom');
 let currentUploadImage = null;
+let cropOffsetX = 0, cropOffsetY = 0, isDraggingCrop = false, startDragX = 0, startDragY = 0;
 
-let cropOffsetX = 0;
-let cropOffsetY = 0;
-let isDraggingCrop = false;
-let startDragX = 0;
-let startDragY = 0;
-
-document.getElementById('changeAvatarBtn')?.addEventListener('click', () => {
-  avatarUpload.click();
-});
+document.getElementById('changeAvatarBtn')?.addEventListener('click', () => avatarUpload.click());
 
 avatarUpload?.addEventListener('change', (e) => {
   const file = e.target.files[0];
@@ -549,11 +724,8 @@ avatarUpload?.addEventListener('change', (e) => {
     reader.onload = (event) => {
       currentUploadImage = new Image();
       currentUploadImage.onload = () => {
-        cropZoom.value = 1; 
-        cropOffsetX = 0;
-        cropOffsetY = 0;
-        cropModal.classList.add('active');
-        drawCrop();
+        cropZoom.value = 1; cropOffsetX = 0; cropOffsetY = 0;
+        cropModal.classList.add('active'); drawCrop();
       };
       currentUploadImage.src = event.target.result;
     };
@@ -561,87 +733,47 @@ avatarUpload?.addEventListener('change', (e) => {
   }
 });
 
-function handleDragStart(x, y) {
-  isDraggingCrop = true;
-  startDragX = x - cropOffsetX;
-  startDragY = y - cropOffsetY;
-}
-function handleDragMove(x, y) {
-  if (!isDraggingCrop) return;
-  cropOffsetX = x - startDragX;
-  cropOffsetY = y - startDragY;
-  drawCrop();
-}
-function handleDragEnd() {
-  isDraggingCrop = false;
-}
+function handleDragStart(x, y) { isDraggingCrop = true; startDragX = x - cropOffsetX; startDragY = y - cropOffsetY; }
+function handleDragMove(x, y) { if (!isDraggingCrop) return; cropOffsetX = x - startDragX; cropOffsetY = y - startDragY; drawCrop(); }
+function handleDragEnd() { isDraggingCrop = false; }
 
 cropCanvas?.addEventListener('mousedown', (e) => handleDragStart(e.clientX, e.clientY));
 cropCanvas?.addEventListener('mousemove', (e) => handleDragMove(e.clientX, e.clientY));
 window.addEventListener('mouseup', handleDragEnd);
-
 cropCanvas?.addEventListener('touchstart', (e) => handleDragStart(e.touches[0].clientX, e.touches[0].clientY));
-cropCanvas?.addEventListener('touchmove', (e) => {
-  e.preventDefault();
-  handleDragMove(e.touches[0].clientX, e.touches[0].clientY);
-});
+cropCanvas?.addEventListener('touchmove', (e) => { e.preventDefault(); handleDragMove(e.touches[0].clientX, e.touches[0].clientY); });
 window.addEventListener('touchend', handleDragEnd);
 
 function drawCrop() {
   if (!currentUploadImage || !ctx) return;
   const zoom = parseFloat(cropZoom.value);
-  const size = 300; 
-  cropCanvas.width = size;
-  cropCanvas.height = size;
-  
-  const scaledWidth = currentUploadImage.width * zoom;
-  const scaledHeight = currentUploadImage.height * zoom;
-  
-  const dx = (size - scaledWidth) / 2 + cropOffsetX;
-  const dy = (size - scaledHeight) / 2 + cropOffsetY;
-
-  ctx.clearRect(0,0, size, size);
-  ctx.drawImage(currentUploadImage, 0, 0, currentUploadImage.width, currentUploadImage.height, dx, dy, scaledWidth, scaledHeight);
+  const size = 300;
+  cropCanvas.width = size; cropCanvas.height = size;
+  const sw = currentUploadImage.width * zoom, sh = currentUploadImage.height * zoom;
+  ctx.clearRect(0,0,size,size);
+  ctx.drawImage(currentUploadImage, 0, 0, currentUploadImage.width, currentUploadImage.height, (size-sw)/2+cropOffsetX, (size-sh)/2+cropOffsetY, sw, sh);
 }
 
 cropZoom?.addEventListener('input', drawCrop);
-
-document.getElementById('cancelCropBtn')?.addEventListener('click', () => {
-  cropModal.classList.remove('active');
-  avatarUpload.value = '';
-});
+document.getElementById('cancelCropBtn')?.addEventListener('click', () => { cropModal.classList.remove('active'); avatarUpload.value = ''; });
 
 applyCropBtn?.addEventListener('click', async () => {
   if (!currentUser) return;
-  
   const base64Avatar = cropCanvas.toDataURL('image/jpeg', 0.8);
   applyCropBtn.textContent = 'Сохранение...';
-  
   try {
-    const { data, error } = await supabaseClient.auth.updateUser({
-      data: { avatar: base64Avatar }
-    });
+    const { data, error } = await supabaseClient.auth.updateUser({ data: { avatar: base64Avatar } });
     if (error) throw error;
-    
     showNotification("Аватар успешно обновлён!");
-    currentUser = data.user;
-    updateAuthButton();
-    // Обновляем аватар в списке аккаунтов
+    currentUser = data.user; updateAuthButton();
     addStoredAccount(currentUser);
     const accs = getStoredAccounts();
     const idx = accs.findIndex(a => a.id === currentUser.id);
-    if (idx >= 0) {
-      accs[idx].avatar = base64Avatar;
-      saveStoredAccounts(accs);
-    }
+    if (idx >= 0) { accs[idx].avatar = base64Avatar; saveStoredAccounts(accs); }
     document.getElementById('profileModalAvatar').src = base64Avatar;
     cropModal.classList.remove('active');
-  } catch (err) {
-    showNotification("Ошибка обновления аватара", "error");
-  } finally {
-    applyCropBtn.textContent = 'Применить';
-    avatarUpload.value = '';
-  }
+  } catch (err) { showNotification("Ошибка обновления аватара", "error"); }
+  finally { applyCropBtn.textContent = 'Применить'; avatarUpload.value = ''; }
 });
 
 // =======================================================================
@@ -649,62 +781,34 @@ applyCropBtn?.addEventListener('click', async () => {
 // =======================================================================
 async function loadComments(ideaId) {
   try {
-    const { data, error } = await supabaseClient
-      .from('comments')
-      .select('*')
-      .eq('idea_id', ideaId)
-      .order('created_at', { ascending: false });
-
+    const { data, error } = await supabaseClient.from('comments').select('*').eq('idea_id', ideaId).order('created_at', { ascending: false });
     if (error) throw error;
     currentIdeaComments = data || [];
     return currentIdeaComments;
-  } catch (error) {
-    console.error('Ошибка загрузки комментариев:', error);
-    return [];
-  }
+  } catch (error) { console.error('Ошибка загрузки комментариев:', error); return []; }
 }
 
 async function addComment(ideaId, text) {
-  if (!currentUser) {
-    showNotification('Войдите, чтобы оставить комментарий', 'error');
-    return null;
-  }
+  if (!currentUser) { showNotification('Войдите, чтобы оставить комментарий', 'error'); return null; }
   try {
-    const { data, error } = await supabaseClient
-      .from('comments')
-      .insert({
-        idea_id: ideaId,
-        user_id: currentUser.id,
-        user_name: currentUser.user_metadata?.name || currentUser.email?.split('@')[0] || 'Аноним',
-        text: text
-      })
-      .select();
-
+    const { data, error } = await supabaseClient.from('comments').insert({
+      idea_id: ideaId, user_id: currentUser.id,
+      user_name: currentUser.user_metadata?.name || currentUser.email?.split('@')[0] || 'Аноним',
+      text: text
+    }).select();
     if (error) throw error;
     showNotification('Комментарий добавлен');
     return data;
-  } catch (error) {
-    showNotification(translateError(error.message), 'error');
-    return null;
-  }
+  } catch (error) { showNotification(translateError(error.message), 'error'); return null; }
 }
 
 // =======================================================================
-// АПВОУТЫ И ИЗБРАННОЕ (Supabase)
+// ЛАЙКИ И ИЗБРАННОЕ
 // =======================================================================
 async function toggleLikeSupabase(ideaId) {
-  if (!currentUser) {
-    showNotification('Войдите, чтобы оценить идею', 'error');
-    return false;
-  }
+  if (!currentUser) { showNotification('Войдите, чтобы оценить идею', 'error'); return false; }
   try {
-    const { data: existing } = await supabaseClient
-      .from('likes')
-      .select('*')
-      .eq('idea_id', ideaId)
-      .eq('user_id', currentUser.id)
-      .single();
-
+    const { data: existing } = await supabaseClient.from('likes').select('*').eq('idea_id', ideaId).eq('user_id', currentUser.id).single();
     if (existing) {
       await supabaseClient.from('likes').delete().eq('idea_id', ideaId).eq('user_id', currentUser.id);
       likes[ideaId] = (likes[ideaId] || 1) - 1;
@@ -713,30 +817,16 @@ async function toggleLikeSupabase(ideaId) {
       await supabaseClient.from('likes').insert({ idea_id: ideaId, user_id: currentUser.id });
       likes[ideaId] = (likes[ideaId] || 0) + 1;
     }
-
     localStorage.setItem('ideahub_likes', JSON.stringify(likes));
     renderCards();
     return true;
-  } catch (error) {
-    console.error('Ошибка с лайком:', error);
-    showNotification('Ошибка при оценке', 'error');
-    return false;
-  }
+  } catch (error) { console.error('Ошибка с лайком:', error); showNotification('Ошибка при оценке', 'error'); return false; }
 }
 
 async function toggleFavSupabase(ideaId) {
-  if (!currentUser) {
-    showNotification('Войдите, чтобы добавить в избранное', 'error');
-    return false;
-  }
+  if (!currentUser) { showNotification('Войдите, чтобы добавить в избранное', 'error'); return false; }
   try {
-    const { data: existing } = await supabaseClient
-      .from('favorites')
-      .select('*')
-      .eq('idea_id', ideaId)
-      .eq('user_id', currentUser.id)
-      .single();
-
+    const { data: existing } = await supabaseClient.from('favorites').select('*').eq('idea_id', ideaId).eq('user_id', currentUser.id).single();
     if (existing) {
       await supabaseClient.from('favorites').delete().eq('idea_id', ideaId).eq('user_id', currentUser.id);
       favorites = favorites.filter(id => id !== ideaId);
@@ -744,42 +834,29 @@ async function toggleFavSupabase(ideaId) {
       await supabaseClient.from('favorites').insert({ idea_id: ideaId, user_id: currentUser.id });
       if (!favorites.includes(ideaId)) favorites.push(ideaId);
     }
-
     localStorage.setItem('ideahub_favs', JSON.stringify(favorites));
     renderCards();
     return true;
-  } catch (error) {
-    console.error('Ошибка с избранным:', error);
-    showNotification('Ошибка при сохранении', 'error');
-    return false;
-  }
+  } catch (error) { console.error('Ошибка с избранным:', error); showNotification('Ошибка при сохранении', 'error'); return false; }
 }
 
 async function loadUserData() {
   try {
     if (!currentUser) return;
-    const { data: favData } = await supabaseClient
-      .from('favorites').select('idea_id').eq('user_id', currentUser.id);
-    if (favData) {
-      favorites = favData.map(f => f.idea_id);
-      localStorage.setItem('ideahub_favs', JSON.stringify(favorites));
-    }
-
-    const { data: likeData } = await supabaseClient
-      .from('likes').select('idea_id').eq('user_id', currentUser.id);
+    const { data: favData } = await supabaseClient.from('favorites').select('idea_id').eq('user_id', currentUser.id);
+    if (favData) { favorites = favData.map(f => f.idea_id); localStorage.setItem('ideahub_favs', JSON.stringify(favorites)); }
+    const { data: likeData } = await supabaseClient.from('likes').select('idea_id').eq('user_id', currentUser.id);
     if (likeData) {
       const newLikes = {};
       likeData.forEach(l => { newLikes[l.idea_id] = (newLikes[l.idea_id] || 0) + 1; });
       likes = { ...likes, ...newLikes };
       localStorage.setItem('ideahub_likes', JSON.stringify(likes));
     }
-  } catch (error) {
-    console.error('Ошибка загрузки данных:', error);
-  }
+  } catch (error) { console.error('Ошибка загрузки данных:', error); }
 }
 
 // =======================================================================
-// КАТАЛОГ ИДЕЙ: ПОИСК, ФИЛЬТРЫ, КАРТОЧКИ
+// КАТАЛОГ ИДЕЙ
 // =======================================================================
 const cardsGrid = document.getElementById('cardsGrid');
 const ideasSearchInput = document.getElementById('ideasSearch');
@@ -789,15 +866,15 @@ const filterPanel = document.getElementById('filterPanel');
 const categoryFilters = document.getElementById('categoryFilters');
 let filterPanelOpen = false;
 
-function renderIdeaCard(idea) {
+function renderIdeaCard(idea, rank) {
   const isFav = favorites.includes(idea.id);
   const likeCount = likes[idea.id] || 0;
+  const rankBadge = rank ? `<div class="card-rank rank-${rank}">${rank}</div>` : '';
   return `
     <div class="glass-card" data-id="${idea.id}">
+      ${rankBadge}
       <span class="card-badge">${idea.category}</span>
-      <button class="card-favorite ${isFav ? 'active' : ''}" data-fav="${idea.id}" aria-label="В избранное">
-        <i data-lucide="arrow-up"></i>
-      </button>
+      <button class="card-favorite ${isFav ? 'active' : ''}" data-fav="${idea.id}" aria-label="В избранное"><i data-lucide="arrow-up"></i></button>
       <h3 class="card-title">${idea.name}</h3>
       <p class="card-desc">${idea.desc}</p>
       <div class="card-meta">
@@ -808,45 +885,78 @@ function renderIdeaCard(idea) {
     </div>`;
 }
 
+function renderTopListItem(idea, rank) {
+  const isFav = favorites.includes(idea.id);
+  const likeCount = likes[idea.id] || 0;
+  const rankClass = rank <= 3 ? `rank-${rank}` : '';
+  return `
+    <div class="top-list-item" data-id="${idea.id}">
+      <div class="top-list-rank ${rankClass}">${rank}</div>
+      <div class="top-list-body">
+        <h3>${idea.name}</h3>
+        <p>${idea.desc}</p>
+      </div>
+      <div class="top-list-meta">
+        <span class="meta-item"><i data-lucide="star"></i> ${idea.rating.toFixed(1)}</span>
+        <span class="meta-item"><i data-lucide="wallet"></i> ${idea.capital.toLocaleString('ru-RU')} ₽</span>
+      </div>
+      <button class="top-list-fav ${isFav ? 'active' : ''}" data-fav="${idea.id}" aria-label="В избранное"><i data-lucide="arrow-up"></i></button>
+    </div>`;
+}
+
 function renderCards() {
   if (!cardsGrid) return;
-  const filtered = ideas.filter(idea => {
+  let filtered = ideas.filter(idea => {
     const matchesCategory = currentCategory === 'all' || idea.category === currentCategory;
-    const matchesSearch = idea.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      idea.category.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = idea.name.toLowerCase().includes(searchTerm.toLowerCase()) || idea.category.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesCategory && matchesSearch;
   });
-
-  cardsGrid.innerHTML = filtered.length
-    ? filtered.map(renderIdeaCard).join('')
-    : '<p style="opacity:0.6;">Ничего не найдено</p>';
-
+  if (currentSidebarTab === 'top') {
+    filtered = filtered.slice().sort((a, b) => b.rating - a.rating);
+    cardsGrid.classList.add('top-mode');
+    cardsGrid.innerHTML = filtered.length
+      ? filtered.map((idea, i) => renderTopListItem(idea, i + 1)).join('')
+      : '<p style="opacity:0.6;">Ничего не найдено</p>';
+  } else {
+    cardsGrid.classList.remove('top-mode');
+    cardsGrid.innerHTML = filtered.length
+      ? filtered.map((idea) => renderIdeaCard(idea, null)).join('')
+      : '<p style="opacity:0.6;">Ничего не найдено</p>';
+  }
   if (window.lucide) lucide.createIcons();
-
-  cardsGrid.querySelectorAll('.card-favorite').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      toggleFavSupabase(parseInt(btn.dataset.fav, 10));
-    });
+  cardsGrid.querySelectorAll('[data-fav]').forEach(btn => {
+    btn.addEventListener('click', (e) => { e.stopPropagation(); toggleFavSupabase(parseInt(btn.dataset.fav, 10)); });
   });
-  cardsGrid.querySelectorAll('.glass-card').forEach(card => {
+  cardsGrid.querySelectorAll('[data-id]').forEach(card => {
     card.addEventListener('click', () => {
       const idea = ideas.find(i => i.id === parseInt(card.dataset.id, 10));
       if (idea) openIdeaModal(idea, card);
     });
   });
+  updateFilterCounts();
 }
 
+let searchDebounceTimer = null;
+const searchBox = document.querySelector('.search-box');
+
 ideasSearchInput?.addEventListener('input', (e) => {
-  searchTerm = e.target.value;
-  if (searchClearBtn) searchClearBtn.style.display = searchTerm ? 'flex' : 'none';
-  renderCards();
+  const val = e.target.value;
+  if (searchClearBtn) searchClearBtn.style.display = val ? 'flex' : 'none';
+  // Показываем спиннер загрузки
+  if (searchBox) searchBox.classList.add('is-loading');
+  clearTimeout(searchDebounceTimer);
+  searchDebounceTimer = setTimeout(() => {
+    searchTerm = val;
+    renderCards();
+    if (searchBox) searchBox.classList.remove('is-loading');
+  }, 700);
 });
 
 searchClearBtn?.addEventListener('click', () => {
-  searchTerm = '';
-  if (ideasSearchInput) ideasSearchInput.value = '';
+  searchTerm = ''; if (ideasSearchInput) ideasSearchInput.value = '';
   searchClearBtn.style.display = 'none';
+  if (searchBox) searchBox.classList.remove('is-loading');
+  clearTimeout(searchDebounceTimer);
   renderCards();
 });
 
@@ -855,28 +965,43 @@ filterToggleBtn?.addEventListener('click', () => {
   if (!filterPanel) return;
   if (filterPanelOpen) {
     filterPanel.style.display = 'block';
+    filterPanel.classList.remove('is-closed');
     requestAnimationFrame(() => {
+      filterPanel.classList.add('is-open');
       filterPanel.style.height = 'auto';
-      filterPanel.style.opacity = '1';
     });
   } else {
-    filterPanel.style.opacity = '0';
-    filterPanel.style.height = '0';
-    setTimeout(() => { filterPanel.style.display = 'none'; }, 300);
+    filterPanel.classList.remove('is-open');
+    filterPanel.classList.add('is-closed');
+    setTimeout(() => { filterPanel.style.display = 'none'; }, 400);
   }
 });
 
 categoryFilters?.querySelectorAll('.filter-pill').forEach(pill => {
   pill.addEventListener('click', () => {
     categoryFilters.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
-    pill.classList.add('active');
-    currentCategory = pill.dataset.category;
-    renderCards();
+    pill.classList.add('active'); currentCategory = pill.dataset.category; renderCards();
   });
 });
 
+function updateFilterCounts() {
+  const pills = categoryFilters?.querySelectorAll('.filter-pill');
+  if (!pills) return;
+  pills.forEach(pill => {
+    const cat = pill.dataset.category;
+    const count = ideas.filter(idea => cat === 'all' || idea.category === cat).length;
+    let countEl = pill.querySelector('.filter-pill-count');
+    if (!countEl) {
+      countEl = document.createElement('span');
+      countEl.className = 'filter-pill-count';
+      pill.appendChild(countEl);
+    }
+    countEl.textContent = count;
+  });
+}
+
 // =======================================================================
-// МОДАЛЬНОЕ ОКНО ДЕТАЛЕЙ ИДЕИ (#detailsModal)
+// МОДАЛЬНОЕ ОКНО ДЕТАЛЕЙ
 // =======================================================================
 const detailsModal = document.getElementById('detailsModal');
 const detailsBackdrop = document.getElementById('detailsBackdrop');
@@ -884,11 +1009,9 @@ const detailsCloseBtn = document.getElementById('detailsCloseBtn');
 const modalDynamicContent = document.getElementById('modalDynamicContent');
 
 function openIdeaModal(idea, cardEl) {
-  recordView('ideas'); 
-  
+  recordView('ideas');
   currentCardElement = cardEl;
   const isFav = favorites.includes(idea.id);
-
   modalDynamicContent.innerHTML = `
     <span class="modal-badge">${idea.category}</span>
     <h2>${idea.name}</h2>
@@ -909,16 +1032,12 @@ function openIdeaModal(idea, cardEl) {
     <button class="btn-glow" id="favToggleBtn" style="margin-top:1rem;">${isFav ? 'В избранном' : 'Добавить в избранное'}</button>
     <div class="comments-section" id="commentsSection">Загрузка комментариев...</div>
   `;
-
   if (window.lucide) lucide.createIcons();
-
   document.getElementById('favToggleBtn')?.addEventListener('click', async () => {
     await toggleFavSupabase(idea.id);
     openIdeaModal(idea, currentCardElement);
   });
-
-  detailsModal.classList.add('active');
-  isModalOpen = true;
+  detailsModal.classList.add('active'); isModalOpen = true;
   loadCommentsUI(idea.id);
 }
 
@@ -926,88 +1045,49 @@ async function loadCommentsUI(ideaId) {
   const commentsSection = document.getElementById('commentsSection');
   if (!commentsSection) return;
   const comments = await loadComments(ideaId);
-
   commentsSection.innerHTML = `
     <h3>Комментарии (${comments.length})</h3>
-    ${comments.length ? comments.map(c => `
-      <div class="comment-item">
-        <div class="comment-author">${c.user_name}</div>
-        <div class="comment-text">${c.text}</div>
-        <div class="comment-time">${new Date(c.created_at).toLocaleString('ru-RU')}</div>
-      </div>`).join('') : '<p style="opacity:0.6;">Пока нет комментариев</p>'}
+    ${comments.length ? comments.map(c => `<div class="comment-item"><div class="comment-author">${c.user_name}</div><div class="comment-text">${c.text}</div><div class="comment-time">${new Date(c.created_at).toLocaleString('ru-RU')}</div></div>`).join('') : '<p style="opacity:0.6;">Пока нет комментариев</p>'}
     <div class="comment-input-group">
       <input type="text" id="newCommentInput" placeholder="${currentUser ? 'Написать комментарий...' : 'Войдите, чтобы комментировать'}" ${currentUser ? '' : 'disabled'} />
       <button id="submitCommentBtn" ${currentUser ? '' : 'disabled'}>Отправить</button>
     </div>
   `;
-
   const input = document.getElementById('newCommentInput');
   const submitBtn = document.getElementById('submitCommentBtn');
-
   submitBtn?.addEventListener('click', async () => {
     const text = input.value.trim();
-    if (text) {
-      await addComment(ideaId, text);
-      input.value = '';
-      loadCommentsUI(ideaId);
-    }
+    if (text) { await addComment(ideaId, text); input.value = ''; loadCommentsUI(ideaId); }
   });
-  input?.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') submitBtn?.click();
-  });
+  input?.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitBtn?.click(); });
 }
 
-function closeDetailsModal() {
-  detailsModal.classList.remove('active');
-  isModalOpen = false;
-  currentCardElement = null;
-}
-
+function closeDetailsModal() { detailsModal.classList.remove('active'); isModalOpen = false; currentCardElement = null; }
 detailsBackdrop?.addEventListener('click', closeDetailsModal);
 detailsCloseBtn?.addEventListener('click', closeDetailsModal);
 
 // =======================================================================
-// ВКЛАДКА "СТАТЬИ"
+// СТАТЬИ
 // =======================================================================
 let articlesLoaded = false;
 
 async function loadArticlesData() {
   if (articlesLoaded) return;
-  try {
-    const res = await fetch('articles.json');
-    articles = await res.json();
-  } catch (error) {
-    console.error('Не удалось загрузить articles.json:', error);
-    articles = [];
-  }
+  try { const res = await fetch('articles.json'); articles = await res.json(); }
+  catch (error) { console.error('Не удалось загрузить articles.json:', error); articles = []; }
   articlesLoaded = true;
 }
 
 function renderArticleCard(article) {
-  return `
-    <div class="glass-card" data-article-id="${article.id}">
-      <span class="card-badge">${article.category}</span>
-      <h3 class="card-title">${article.title}</h3>
-      <p class="card-desc">${article.description}</p>
-      <div class="card-meta">
-        <span class="meta-item"><i data-lucide="user"></i> ${article.author}</span>
-        <span class="meta-item"><i data-lucide="clock"></i> ${article.readTime} мин</span>
-      </div>
-    </div>`;
+  return `<div class="glass-card" data-article-id="${article.id}"><span class="card-badge">${article.category}</span><h3 class="card-title">${article.title}</h3><p class="card-desc">${article.description}</p><div class="card-meta"><span class="meta-item"><i data-lucide="user"></i> ${article.author}</span><span class="meta-item"><i data-lucide="clock"></i> ${article.readTime} мин</span></div></div>`;
 }
 
 async function renderArticles() {
   const articlesGrid = document.getElementById('articlesGrid');
   if (!articlesGrid) return;
-
   await loadArticlesData();
-
-  articlesGrid.innerHTML = articles.length
-    ? articles.map(renderArticleCard).join('')
-    : '<p style="opacity:0.6;">Статьи не найдены</p>';
-
+  articlesGrid.innerHTML = articles.length ? articles.map(renderArticleCard).join('') : '<p style="opacity:0.6;">Статьи не найдены</p>';
   if (window.lucide) lucide.createIcons();
-
   articlesGrid.querySelectorAll('.glass-card').forEach(card => {
     card.addEventListener('click', () => {
       const article = articles.find(a => a.id === parseInt(card.dataset.articleId, 10));
@@ -1017,32 +1097,22 @@ async function renderArticles() {
 }
 
 function openArticleModal(article) {
-  recordView('articles'); 
-  
-  modalDynamicContent.innerHTML = `
-    <span class="modal-badge">${article.category}</span>
-    <h2>${article.title}</h2>
-    <p style="opacity:0.6; margin: 0.5rem 0 1.5rem;">${article.author} · ${new Date(article.date).toLocaleDateString('ru-RU')} · ${article.readTime} мин чтения</p>
-    <div class="modal-blocks">${article.content}</div>
-  `;
-  detailsModal.classList.add('active');
-  isModalOpen = true;
+  recordView('articles');
+  modalDynamicContent.innerHTML = `<span class="modal-badge">${article.category}</span><h2>${article.title}</h2><p style="opacity:0.6; margin: 0.5rem 0 1.5rem;">${article.author} · ${new Date(article.date).toLocaleDateString('ru-RU')} · ${article.readTime} мин чтения</p><div class="modal-blocks">${article.content}</div>`;
+  detailsModal.classList.add('active'); isModalOpen = true;
 }
 
 // =======================================================================
 // ИНИЦИАЛИЗАЦИЯ
 // =======================================================================
 document.addEventListener('DOMContentLoaded', async () => {
+  applyTheme(getCurrentTheme());
   await updateUserUI();
   await loadUserData();
-
   renderCards();
-
   const active = document.querySelector('.nav-tab.active') || navTabs[0];
   if (active) moveIndicator(active);
-
   if (window.lucide) lucide.createIcons();
-
   if (window.gsap) {
     gsap.from('.hero-title', { opacity: 0, y: 50, duration: 1, ease: 'power2.out' });
     gsap.from('.hero-subtitle', { opacity: 0, y: 30, duration: 1, delay: 0.2, ease: 'power2.out' });
